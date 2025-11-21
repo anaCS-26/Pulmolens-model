@@ -1,7 +1,41 @@
+# Update gitignore to organize outputs
 __pycache__/
 *.pyc
 .venv/
-data/
-*.pth
-*.zip
+
+# Data directory (large files)
+data/images_*/
+data/*.zip
+data/*.tar.gz
+
+# Keep data CSV and PDF files
+!data/*.csv
+!data/*.pdf
+
+# Model checkpoints
+models/*.pth
+!models/README.md
+
+# Results and outputs
+results/*
+!results/README.md
+visualizations/*
+!visualizations/README.md
+logs/*
+!logs/README.md
+
+# System files
 .DS_Store
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# ONNX models (large)
+*.onnx
