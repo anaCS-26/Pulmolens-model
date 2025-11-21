@@ -46,6 +46,47 @@ def evaluate_model(model_path='best_model.pth', data_dir='./data'):
 
     dataset = NIHChestXrayDataset(root_dir=images_dir, csv_file=csv_path, transform=transform)
     
+    # --- Full Evaluation ---
+    print("Running full evaluation on dataset...")
+    dataloader = DataLoader(dataset, batch_size=32, shuffle=False, num_workers=4)
+    
+    all_targets = []
+    all_preds = []
+    
+    with torch.no_grad():
+        for i, (inputs, targets) in enumerate(dataloader):
+            if i >= 200: # Limit to 200 batches (~6400 images) for speed
+                break
+            inputs = inputs.to(device)
+            outputs = model(inputs)
+            preds = torch.sigmoid(outputs)
+            
+            all_targets.append(targets.numpy())
+            all_preds.append(preds.cpu().numpy())
+            
+    all_targets = np.vstack(all_targets)
+    all_preds = np.vstack(all_preds)
+    
+    from sklearn.metrics import roc_auc_score, classification_report
+    
+    print("\n--- Model Metrics ---")
+    aucs = []
+    for i, label in enumerate(dataset.all_labels):
+        try:
+            auc = roc_auc_score(all_targets[:, i], all_preds[:, i])
+            aucs.append(auc)
+            print(f"{label}: AUC = {auc:.4f}")
+        except ValueError:
+            print(f"{label}: AUC = N/A (Only one class present)")
+            
+    print(f"\nMean AUC: {np.mean(aucs):.4f}")
+    
+    # F1 Score (using 0.5 threshold)
+    print("\n--- Classification Report (Threshold 0.5) ---")
+    print(classification_report(all_targets, (all_preds > 0.5).astype(int), target_names=dataset.all_labels, zero_division=0))
+    
+    # --- Visualization ---
+    print("\nGenerating Grad-CAM visualizations...")
     # Visualize 5 samples
     indices = np.random.choice(len(dataset), 5, replace=False)
     
@@ -78,18 +119,24 @@ def evaluate_model(model_path='best_model.pth', data_dir='./data'):
         
         visualization = show_cam_on_image(orig_img, mask)
         
+        # Get true labels
+        true_labels_indices = np.where(label.numpy() == 1)[0]
+        true_labels = [dataset.all_labels[i] for i in true_labels_indices]
+        true_label_str = ", ".join(true_labels) if true_labels else "No Finding"
+        
         # Save
-        plt.figure(figsize=(10, 5))
+        plt.figure(figsize=(12, 6))
         plt.subplot(1, 2, 1)
         plt.imshow(orig_img)
-        plt.title("Original")
+        plt.title(f"Original\nTrue: {true_label_str}")
         plt.axis('off')
         
         plt.subplot(1, 2, 2)
         plt.imshow(visualization)
-        plt.title(f"Grad-CAM: {class_name}")
+        plt.title(f"Grad-CAM\nPred: {class_name} ({top_class_prob:.2f})")
         plt.axis('off')
         
+        plt.tight_layout()
         plt.savefig(f"gradcam_result_{idx}.png")
         plt.close()
         print(f"Saved gradcam_result_{idx}.png")

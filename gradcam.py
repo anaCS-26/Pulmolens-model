@@ -54,8 +54,13 @@ class GradCAM:
         # ReLU on top
         heatmap = F.relu(heatmap)
         
-        # Normalize the heatmap
-        heatmap /= torch.max(heatmap)
+        # Normalize the heatmap (Min-Max)
+        heatmap_min = torch.min(heatmap)
+        heatmap_max = torch.max(heatmap)
+        heatmap = (heatmap - heatmap_min) / (heatmap_max - heatmap_min + 1e-8)
+        
+        # Thresholding to reduce noise (reduce "all red" effect)
+        heatmap[heatmap < 0.2] = 0
         
         heatmap = heatmap.cpu().numpy()
         
