@@ -55,8 +55,6 @@ def evaluate_model(model_path='best_model.pth', data_dir='./data'):
     
     with torch.no_grad():
         for i, (inputs, targets) in enumerate(dataloader):
-            if i >= 200: # Limit to 200 batches (~6400 images) for speed
-                break
             inputs = inputs.to(device)
             outputs = model(inputs)
             preds = torch.sigmoid(outputs)
