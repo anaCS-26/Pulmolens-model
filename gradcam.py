@@ -60,7 +60,7 @@ class GradCAM:
         heatmap = (heatmap - heatmap_min) / (heatmap_max - heatmap_min + 1e-8)
         
         # Thresholding to reduce noise (reduce "all red" effect)
-        heatmap[heatmap < 0.2] = 0
+        heatmap[heatmap < 0.3] = 0
         
         heatmap = heatmap.cpu().numpy()
         
@@ -72,6 +72,9 @@ class GradCAM:
 def show_cam_on_image(img, mask):
     heatmap = cv2.applyColorMap(np.uint8(255 * mask), cv2.COLORMAP_JET)
     heatmap = np.float32(heatmap) / 255
-    cam = heatmap + np.float32(img)
+    
+    # Weighted combination to prevent heatmap from overpowering the image
+    cam = 0.4 * heatmap + 0.6 * np.float32(img)
+    
     cam = cam / np.max(cam)
     return np.uint8(255 * cam)
