@@ -19,6 +19,7 @@ models/*.pth
 # Results and outputs
 results/*
 !results/README.md
+!results/*.png
 visualizations/
 logs/
 *.data
