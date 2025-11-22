@@ -77,10 +77,10 @@ python deployment/convert_to_onnx.py \
 
 ## 📊 Performance
 
-| Model | Mean AUC | Mean Recall |
-|-------|----------|-------------|
-| Baseline DenseNet | 0.8886 | 0.19 |
-| **Attention DenseNet + ASL** | **>0.90** | **>0.40** |
+| Model | Mean AUC | Weighted Recall | Weighted F1 |
+|-------|----------|-----------------|-------------|
+| Baseline DenseNet | 0.8886 | 0.19 | - |
+| **Attention DenseNet + ASL** | **>0.90** | **0.50** | **0.41** |
 
 ## 🔧 Model Options
 
