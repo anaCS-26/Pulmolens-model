@@ -1,9 +1,13 @@
 import torch
 from torch.utils.data import DataLoader
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from torchvision import transforms
-from dataset import NIHChestXrayDataset
-from model import LungDiseaseModel
-from gradcam import GradCAM, show_cam_on_image
+from src.data.dataset import NIHChestXrayDataset
+from src.models.model import LungDiseaseModel
+from src.evaluation.gradcam import GradCAM, show_cam_on_image
 import os
 import numpy as np
 import matplotlib.pyplot as plt

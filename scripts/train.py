@@ -10,12 +10,16 @@ import numpy as np
 import argparse
 from datetime import datetime
 
-# Import custom modules
-from dataset import NIHChestXrayDataset
-from model import get_model
-from losses import get_loss_function
-from config import Config, create_directories, CLASS_NAMES, DEFAULT_POS_WEIGHTS
-from augmentation import get_training_augmentation, get_validation_augmentation, mixup_data, cutmix_data
+# Import# Custom modules - add project root to path
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from src.data.dataset import NIHChestXrayDataset
+from src.models.model import get_model
+from src.training.losses import get_loss_function
+from src.training.config import Config, create_directories, CLASS_NAMES, DEFAULT_POS_WEIGHTS
+from src.data.augmentation import get_training_augmentation, get_validation_augmentation, mixup_data, cutmix_data
 from PIL import Image
 
 

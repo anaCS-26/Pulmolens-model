@@ -8,7 +8,7 @@ except ImportError:
     TIMM_AVAILABLE = False
     print("Warning: timm not available. EfficientNet models will not work.")
 
-from attention_modules import CBAM, SEBlock, CoordinateAttention
+from .attention_modules import CBAM, SEBlock, CoordinateAttention
 
 
 class LungDiseaseModel(nn.Module):

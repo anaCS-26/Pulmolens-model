@@ -10,12 +10,16 @@ from sklearn.metrics import roc_auc_score, precision_recall_curve, average_preci
 import seaborn as sns
 
 # Import custom modules
-from dataset import NIHChestXrayDataset
-from model import get_model
-from gradcam_plus_plus import GradCAMPlusPlus, ScoreCAM, show_cam_on_image
-from threshold_optimizer import optimize_thresholds, load_thresholds, visualize_threshold_curves
-from augmentation import get_validation_augmentation, get_tta_augmentation
-from config import Config, CLASS_NAMES
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from src.data.dataset import NIHChestXrayDataset
+from src.models.model import get_model
+from src.evaluation.gradcam_plus_plus import GradCAMPlusPlus, ScoreCAM, show_cam_on_image
+from src.evaluation.threshold_optimizer import optimize_thresholds, load_thresholds, visualize_threshold_curves
+from src.data.augmentation import get_validation_augmentation, get_tta_augmentation
+from src.training.config import Config, CLASS_NAMES
 from torchvision import transforms
 
 
@@ -90,7 +94,7 @@ def evaluate_model(model_path, config=None, **kwargs):
     print("=== Loading Model ===")
     
     # Try to load checkpoint to get config
-    checkpoint = torch.load(model_path, map_location=device)
+    checkpoint = torch.load(model_path, map_location=device, weights_only=False)
     if isinstance(checkpoint, dict) and 'config' in checkpoint:
         # Load model with saved config
         saved_config = checkpoint['config']
@@ -248,8 +252,8 @@ def evaluate_model(model_path, config=None, **kwargs):
     if config.eval['optimize_threshold']:
         print(f"\n=== Optimizing Thresholds (metric: {config.eval['threshold_metric']}) ===")
         
-        # Since we don't have a  dataloader, create optimal thresholds directly
-        from threshold_optimizer import find_optimal_threshold_per_class
+        # Since we don't have a dataloader, create optimal thresholds directly
+        from src.evaluation.threshold_optimizer import find_optimal_threshold_per_class
         
         optimal_thresholds = find_optimal_threshold_per_class(
             all_targets,

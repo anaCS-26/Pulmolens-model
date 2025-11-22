@@ -1,4 +1,8 @@
-from dataset import NIHChestXrayDataset
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from src.data.dataset import NIHChestXrayDataset
 from torchvision import transforms
 import torch
 import os
