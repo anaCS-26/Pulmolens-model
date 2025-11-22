@@ -14,7 +14,7 @@ from src.data.dataset import get_data_loaders
 from src.models.densenet import DenseNet121, AttentionDenseNet
 from src.training.losses import AsymmetricLoss, FocalLoss
 
-def train_one_epoch(model, loader, criterion, optimizer, device):
+def train_one_epoch(model, loader, criterion, optimizer, device, scaler):
     model.train()
     running_loss = 0.0
     
@@ -24,10 +24,14 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
         targets = targets.to(device)
         
         optimizer.zero_grad()
-        outputs = model(images)
-        loss = criterion(outputs, targets)
-        loss.backward()
-        optimizer.step()
+        
+        with torch.cuda.amp.autocast():
+            outputs = model(images)
+            loss = criterion(outputs, targets)
+            
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
         
         running_loss += loss.item()
         pbar.set_postfix({'loss': running_loss / (pbar.n + 1)})
@@ -53,7 +57,7 @@ def validate(model, loader, criterion, device):
             # Collect for AUC
             probs = torch.sigmoid(outputs)
             all_targets.append(targets.cpu().numpy())
-            all_probs.append(probs.cpu().numpy())
+            all_probs.append(probs.detach().cpu().numpy())
             
     all_targets = np.concatenate(all_targets)
     all_probs = np.concatenate(all_probs)
@@ -105,6 +109,7 @@ def main(args):
     # Optimizer & Scheduler
     optimizer = optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
     scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=0.1, patience=2)
+    scaler = torch.cuda.amp.GradScaler()
     
     # Training Loop
     best_auc = 0.0
@@ -116,7 +121,7 @@ def main(args):
         print(f"\nEpoch {epoch+1}/{config.NUM_EPOCHS}")
         
         # Train
-        train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device)
+        train_loss = train_one_epoch(model, train_loader, criterion, optimizer, device, scaler)
         
         # Validate
         val_loss, val_auc = validate(model, val_loader, criterion, device)

@@ -22,9 +22,32 @@ def evaluate_and_visualize(model_path, image_path, thresholds_path=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     # Load model
-    model = DenseNet121(num_classes=len(config.CLASS_NAMES))
     if os.path.exists(model_path):
-        model.load_state_dict(torch.load(model_path, map_location=device))
+        checkpoint = torch.load(model_path, map_location=device, weights_only=False)
+        
+        # Determine model type
+        if isinstance(checkpoint, dict) and 'config' in checkpoint:
+            model_type = checkpoint['config'].get('model_type', 'densenet')
+        else:
+            model_type = 'attention_densenet' if 'attention' in model_path else 'densenet'
+            
+        print(f"Initializing {model_type}...")
+        from src.models.densenet import AttentionDenseNet, DenseNet121
+        
+        if model_type == 'attention_densenet':
+            model = AttentionDenseNet(num_classes=len(config.CLASS_NAMES))
+        else:
+            model = DenseNet121(num_classes=len(config.CLASS_NAMES))
+            
+        # Handle both full checkpoint and state_dict
+        if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+            model.load_state_dict(checkpoint['model_state_dict'])
+        else:
+            model.load_state_dict(checkpoint)
+    else:
+        print(f"Model path {model_path} not found.")
+        return
+
     model.to(device)
     model.eval()
     
@@ -44,8 +67,21 @@ def evaluate_and_visualize(model_path, image_path, thresholds_path=None):
         output = model(input_tensor)
         probs = torch.sigmoid(output).cpu().numpy()[0]
         
+    # Get true label
+    true_labels = []
+    try:
+        import pandas as pd
+        df = pd.read_csv('data/Data_Entry_2017.csv')
+        row = df[df['Image Index'] == os.path.basename(image_path)]
+        if not row.empty:
+            labels = row.iloc[0]['Finding Labels'].split('|')
+            true_labels = labels
+    except Exception as e:
+        print(f"Could not load true labels: {e}")
+
     # Print predictions
     print(f"Predictions for {os.path.basename(image_path)}:")
+    print(f"True Labels: {', '.join(true_labels)}")
     print("-" * 40)
     found_findings = False
     for i, class_name in enumerate(config.CLASS_NAMES):
@@ -62,8 +98,13 @@ def evaluate_and_visualize(model_path, image_path, thresholds_path=None):
         print("No findings detected.")
         
     # Grad-CAM++ Visualization
-    # Target the last dense block
-    target_layers = [model.densenet.features.denseblock4.denselayer16.conv2]
+    # Target the last norm layer (after attention in AttentionDenseNet)
+    if isinstance(model, AttentionDenseNet):
+        target_layers = [model.features.norm5]
+    else:
+        # For standard DenseNet121, target the last dense block's last conv or norm5
+        # model.densenet.features.norm5 is the final norm layer
+        target_layers = [model.densenet.features.norm5]
     
     cam = GradCAMPlusPlus(model=model, target_layers=target_layers)
     

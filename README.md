@@ -61,9 +61,18 @@ python -m src.evaluation.optimizer --model_path models/best_model.pth
 Generate Grad-CAM++ heatmaps (saved to `results/`):
 
 ```bash
-python -m src.evaluation.gradcam \
     --image_path data/images_001/images/00000001_000.png \
     --model_path models/best_model.pth
+```
+
+### 5. Deploy (ONNX)
+
+Convert the trained model to ONNX format for deployment:
+
+```bash
+python deployment/convert_to_onnx.py \
+    --model_path models/best_model.pth \
+    --output_path models/pulmolens.onnx
 ```
 
 ## 📊 Performance
@@ -80,7 +89,7 @@ python -m src.evaluation.gradcam \
 
 ## 📖 Documentation
 
-- **[walkthrough.md](walkthrough.md)** - Implementation walkthrough
+- **[Walkthrough](walkthrough.md)** - Detailed implementation steps, verification results, and Grad-CAM visualizations.
 
 ## 📝 License
 

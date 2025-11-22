@@ -1,7 +1,7 @@
 import os
 
 # Hyperparameters
-BATCH_SIZE = 16
+BATCH_SIZE = 8
 LEARNING_RATE = 1e-4
 IMAGE_SIZE = 512
 NUM_EPOCHS = 20

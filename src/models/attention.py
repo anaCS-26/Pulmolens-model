@@ -5,7 +5,7 @@ class ChannelAttention(nn.Module):
     def __init__(self, in_planes, ratio=16):
         super(ChannelAttention, self).__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.max_pool = nn.AdaptiveMaxPool2d(1)
+        # self.max_pool = nn.AdaptiveMaxPool2d(1) # Removed for ONNX compatibility
         
         self.fc1 = nn.Conv2d(in_planes, in_planes // ratio, 1, bias=False)
         self.relu1 = nn.ReLU()
@@ -15,7 +15,13 @@ class ChannelAttention(nn.Module):
 
     def forward(self, x):
         avg_out = self.fc2(self.relu1(self.fc1(self.avg_pool(x))))
-        max_out = self.fc2(self.relu1(self.fc1(self.max_pool(x))))
+        
+        # Manual global max pooling for ONNX compatibility
+        # x: [B, C, H, W] -> [B, C, H*W] -> max(dim=2) -> [B, C, 1, 1]
+        b, c, _, _ = x.size()
+        max_pool_out = torch.max(x.view(b, c, -1), dim=2)[0].view(b, c, 1, 1)
+        max_out = self.fc2(self.relu1(self.fc1(max_pool_out)))
+        
         out = avg_out + max_out
         return self.sigmoid(out)
 

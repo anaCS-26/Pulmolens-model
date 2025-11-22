@@ -13,15 +13,33 @@ from src.data.dataset import get_data_loaders
 def optimize_thresholds(model_path):
     # Load model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = DenseNet121(num_classes=len(config.CLASS_NAMES))
-    
     # Load weights
     if os.path.exists(model_path):
-        state_dict = torch.load(model_path, map_location=device)
-        model.load_state_dict(state_dict)
+        checkpoint = torch.load(model_path, map_location=device, weights_only=False)
+        
+        # Determine model type
+        if isinstance(checkpoint, dict) and 'config' in checkpoint:
+            model_type = checkpoint['config'].get('model_type', 'densenet')
+        else:
+            model_type = 'attention_densenet' if 'attention' in model_path else 'densenet'
+            
+        print(f"Initializing {model_type}...")
+        from src.models.densenet import AttentionDenseNet, DenseNet121
+        
+        if model_type == 'attention_densenet':
+            model = AttentionDenseNet(num_classes=len(config.CLASS_NAMES))
+        else:
+            model = DenseNet121(num_classes=len(config.CLASS_NAMES))
+            
+        # Handle both full checkpoint and state_dict
+        if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+            model.load_state_dict(checkpoint['model_state_dict'])
+        else:
+            model.load_state_dict(checkpoint)
         print(f"Loaded model from {model_path}")
     else:
-        print(f"Model path {model_path} not found. Using random weights for demonstration.")
+        print(f"Model path {model_path} not found.")
+        return
     
     model.to(device)
     model.eval()
