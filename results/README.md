@@ -18,12 +18,16 @@ We use Grad-CAM++ to visualize the regions of the X-ray that the model focuses o
 
 ### Case 1: Cardiomegaly
 **Prediction**: Cardiomegaly (Conf: 0.72)
+
 ![Cardiomegaly Grad-CAM](gradcam_Cardiomegaly_00000001_000.png)
+
 *The model correctly focuses on the enlarged heart region.*
 
 ### Case 2: Hernia
 **Prediction**: Hernia (Conf: 0.90)
+
 ![Hernia Grad-CAM](gradcam_Hernia_00000003_000.png)
+
 *The model identifies the abnormality in the diaphragm area.*
 
 ## Files
