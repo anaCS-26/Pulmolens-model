@@ -37,7 +37,7 @@ graph TD
     
     subgraph "RAG Pipeline"
         DL -- Finding --> VDB[(Pinecone Vector DB)]
-        VDB -- Guidelines --> LLM[Gemini 1.5 Flash-Lite]
+        VDB -- Guidelines --> LLM[Gemini 2.5 Flash-Lite]
         LLM -- Structured Report --> BE
     end
     
