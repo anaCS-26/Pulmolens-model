@@ -1,4 +1,4 @@
-# Update gitignore to organize outputs
+# Python
 __pycache__/
 *.pyc
 .venv/
@@ -41,3 +41,17 @@ logs/
 
 # ONNX models (large)
 *.onnx
+
+# Azure resource dumps / sensitive infrastructure files
+all_resources.json
+infra/params.json
+infra/secrets.bicep
+
+# Frontend build artifacts
+frontend/dist/
+frontend/node_modules/
+frontend/build_error.txt
+frontend/.env.production
+
+# Duplicate files
+backend/dockerignore

@@ -23,6 +23,12 @@ from pytorch_grad_cam import GradCAMPlusPlus
 from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 from model import AttentionDenseNet
+import logging
+
+logger = logging.getLogger("pulmolens")
+logging.basicConfig(level=logging.INFO)
+
+API_VERSION = "1.0.0"
 
 # --- MCP: Model Context Protocol Tool Interface ---
 MCP_TOOL_DEFINITION = {
@@ -37,9 +43,7 @@ MCP_TOOL_DEFINITION = {
     }
 }
 
-print("STARTING V5 DEBUG")
-
-app = FastAPI(title="Pulmolens API", description="Lung Disease Classification API")
+app = FastAPI(title="PulmoLens API", description="AI-Assisted Radiographic Guidance API", version=API_VERSION)
 
 # Azure Configuration (Env Vars or Defaults for Dev)
 COSMOS_ENDPOINT = os.getenv("COSMOS_ENDPOINT")
@@ -55,14 +59,14 @@ try:
         cosmos_client = CosmosClient(COSMOS_ENDPOINT, COSMOS_KEY)
         database = cosmos_client.get_database_client("pulmolens-db")
         cosmos_container = database.get_container_client("feedback")
-        print("Cosmos DB client initialized")
+        logger.info("Cosmos DB client initialized")
     
     if STORAGE_CONN_STR:
         blob_service_client = BlobServiceClient.from_connection_string(STORAGE_CONN_STR)
         blob_container_client = blob_service_client.get_container_client("images")
-        print("Blob Storage client initialized")
+        logger.info("Blob Storage client initialized")
 except Exception as e:
-    print(f"Error initializing Azure clients: {e}")
+    logger.error(f"Error initializing Azure clients: {e}")
 
 # Initialize RAG Components
 load_dotenv()
@@ -70,33 +74,29 @@ try:
     rag_embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-2-preview")
     vector_store = PineconeVectorStore(index_name="pulmolens-guidelines", embedding=rag_embeddings)
     # Using the most recent Gemini Flash Lite model!
-    llm = ChatGoogleGenerativeAI(model="gemini-3.1-flash-lite-preview")
-    print("Langchain RAG components initialized successfully")
+    llm = ChatGoogleGenerativeAI(model="gemini-flash-lite-latest")
+    logger.info("RAG components initialized (Gemini Flash Lite + Pinecone)")
 except Exception as e:
-    print(f"Error initializing RAG components: {e}")
+    logger.error(f"Error initializing RAG components: {e}")
     vector_store = None
     llm = None
 
 # Add CORS middleware
-origins = ["*"]
+origins = [
+    "https://victorious-sky-0836ce10f.3.azurestaticapps.net",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173"
+]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 router = APIRouter()
-
-# Feedback model not used for request body anymore since we use Form data
-# class Feedback(BaseModel):
-#     image_id: str
-#     rating: str  # "good" or "bad"
-#     details: Optional[str] = None
-#     predictions: Optional[dict] = None
-#     timestamp: Optional[str] = None
 
 from fastapi import Form
 
@@ -115,11 +115,9 @@ async def submit_feedback(
             blob_name = f"{uuid.uuid4()}_{file.filename}"
             blob_container_client.upload_blob(blob_name, file.file)
             blob_url = blob_container_client.get_blob_client(blob_name).url
-            print(f"Image uploaded to blob: {blob_url}")
+            logger.info(f"Image uploaded to blob: {blob_url}")
         except Exception as e:
-            print(f"Error uploading to blob: {e}")
-            # We continue even if blob upload fails, to save feedback text? 
-            # Or maybe fail? Let's log and continue.
+            logger.error(f"Error uploading to blob: {e}")
 
     # Save to Cosmos DB
     if cosmos_container:
@@ -133,25 +131,25 @@ async def submit_feedback(
                 "timestamp": datetime.utcnow().isoformat()
             }
             cosmos_container.create_item(body=item)
-            print("Feedback saved to Cosmos DB")
+            logger.info("Feedback saved to Cosmos DB")
         except Exception as e:
-            print(f"Error saving to Cosmos DB: {e}")
+            logger.error(f"Error saving to Cosmos DB: {e}")
             
     return {"status": "received", "message": "Thank you for your feedback!"}
 
 # --- CLOUD DECOUPLING: Model Download Helper ---
 def download_model(url, path):
     try:
-        print(f"Cloud Deployment: Downloading model weights from {url}...")
+        logger.info(f"Downloading model weights from Azure Blob Storage...")
         response = requests.get(url, stream=True, timeout=300)
         response.raise_for_status()
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, 'wb') as file:
             for data in response.iter_content(chunk_size=1024 * 1024):
                 file.write(data)
-        print(f"Successfully downloaded model to {path}")
+        logger.info(f"Model downloaded successfully to {path}")
     except Exception as e:
-        print(f"FATAL: Model download failed: {e}")
+        logger.critical(f"Model download failed: {e}")
         raise e
 
 # Load PyTorch model
@@ -177,12 +175,12 @@ try:
             model.load_state_dict(checkpoint)
         model.to(device)
         model.eval()
-        print(f"Model loaded successfully from {MODEL_PATH}")
+        logger.info(f"Model loaded successfully from {MODEL_PATH}")
     else:
-        print(f"WARNING: Model file NOT found at {MODEL_PATH}. Inference will fail until weights are provided.")
+        logger.warning(f"Model file not found at {MODEL_PATH}. Inference will be unavailable.")
         model = None
 except Exception as e:
-    print(f"Error loading model: {e}")
+    logger.error(f"Error loading model: {e}")
     model = None
 
 # Class names
@@ -228,7 +226,7 @@ def preprocess_image(image_bytes):
 async def health_check():
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
-    return {"status": "healthy", "model": "loaded (PyTorch)", "version": "v8-cors"}
+    return {"status": "healthy", "model": "loaded (PyTorch)", "version": API_VERSION}
 
 @router.post("/predict")
 async def predict(file: UploadFile = File(...)):
@@ -237,6 +235,10 @@ async def predict(file: UploadFile = File(...)):
         
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
+    
+    # Initialize response variables to avoid UnboundLocalError
+    clinical_report = "Analysis complete."
+    cited_sources = []
     
     contents = await file.read()
     input_tensor, img_float, image = preprocess_image(contents)
@@ -281,9 +283,7 @@ async def predict(file: UploadFile = File(...)):
         heatmap_b64 = "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode('utf-8')
         
     except Exception as e:
-        print(f"Grad-CAM failed: {e}")
-        # Don't fail the request, just return no heatmap
-        pass
+        logger.warning(f"Grad-CAM generation failed: {e}")
         
     # Upload to Blob Storage REMOVED for privacy
     # Images are only stored if user submits feedback
@@ -302,7 +302,8 @@ async def predict(file: UploadFile = File(...)):
             
             # --- AGENTIC GATE: Confidence Check (Deterministic Flow) ---
             # If the top finding is below 50% confidence, we trigger the 'Uncertainty Agent'
-            is_low_confidence = top_probs[0] < 0.5 if top_probs else True
+            sorted_probs = sorted(probs, reverse=True)
+            is_low_confidence = sorted_probs[0] < 0.5 if len(sorted_probs) > 0 else True
             
             if is_low_confidence:
                 prompt_task = "The model is UNCERTAIN (confidence < 50%). Explain that the image quality or features are indeterminate and suggest a higher-fidelity scan or clinical correlation to confirm findings."
@@ -354,14 +355,14 @@ async def predict(file: UploadFile = File(...)):
             cited_sources = list(dict.fromkeys(cited_sources))
             
         except Exception as e:
-            print(f"RAG LLM Error: {e}")
+            logger.error(f"RAG pipeline error: {e}")
             clinical_report = f"Detected {', '.join(top_findings)}. (RAG explanation temporarily unavailable)."
             cited_sources = []
 
     return {
         "predictions": results,
         "heatmap": heatmap_b64,
-        "version": "v7-rag-sources",
+        "version": API_VERSION,
         "imageId": blob_url or file.filename,
         "report": clinical_report,
         "sources": cited_sources

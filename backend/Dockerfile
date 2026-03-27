@@ -1,27 +1,29 @@
+# PulmoLens Enterprise Backend - Optimized AI Runtime
 FROM python:3.10-slim-bookworm
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system utilities for OpenCV (Headless)
 RUN apt-get update && apt-get install -y \
-    libgl1 \
+    libgl1-mesa-glx \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-# Install Python dependencies
+# Install AI dependencies (Cached)
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy standalone backend logic
 COPY api.py .
 COPY model.py .
-COPY src src
-COPY models/attention_densenet_asl_20251121_213351_best.pth models/
+COPY ingest_docs.py .
+# DATA directories used by RAG
+COPY data data
 
-# Expose port
+# Note: The PyTorch model weights (.pth) are NOT baked into this image.
+# Weights are pulled at runtime from Azure Blob Storage via MODEL_SAS_URL.
+
 EXPOSE 8000
 
-# Run the application
 CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
