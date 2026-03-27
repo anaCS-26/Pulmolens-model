@@ -1,0 +1,14 @@
+data
+data/
+results
+results/
+.venv
+.venv/
+.git
+.git/
+__pycache__
+__pycache__/
+
+deploy_azure.sh
+README.md
+.gitignore

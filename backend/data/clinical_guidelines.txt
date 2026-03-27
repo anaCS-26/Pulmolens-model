@@ -1,0 +1,31 @@
+# Clinical Guidelines for Common Lung Pathologies (ChestX-ray14)
+
+## 1. Pneumonia
+**Description:** An infection that inflames the air sacs in one or both lungs. The air sacs may fill with fluid or pus (purulent material), causing a cough with phlegm or pus, fever, chills, and difficulty breathing.
+**Radiographic Findings:** Usually appears as a focal consolidation, typically lobar or segmental. Air bronchograms may be visible.
+**Patient Instructions:** You should seek immediate medical attention if you experience severe chest pain, prolonged high fever, or severe difficulty breathing. Prescribed antibiotics must be completed even if symptoms improve. Drink plenty of fluids and rest. 
+**Next Steps for Physician:** Confirm with clinical history. Prescribe appropriate antibiotics based on suspected pathogen. Consider repeat X-ray in 4-6 weeks to ensure resolution.
+
+## 2. Cardiomegaly
+**Description:** An enlarged heart. This is usually a sign of another condition, such as heart failure, coronary artery disease, or a heart valve problem.
+**Radiographic Findings:** The cardiothoracic ratio (CTR) is greater than 0.50 (the heart occupies more than 50% of the maximum internal diameter of the thoracic cage) on a PA view.
+**Patient Instructions:** This indicates your heart is working harder than it should. You should consult a cardiologist for further testing. Monitor your weight daily and report sudden increases to your doctor, as this may indicate fluid retention.
+**Next Steps for Physician:** Order an echocardiogram to assess cardiac function and valvular structure. Consider prescribing diuretics or ACE inhibitors if heart failure is confirmed.
+
+## 3. Pleural Effusion
+**Description:** The build-up of excess fluid between the layers of the pleura outside the lungs.
+**Radiographic Findings:** Blunting of the costophrenic angles. In larger effusions, a meniscus (curved upper border) is seen. Often associated with cardiomegaly in heart failure.
+**Patient Instructions:** You may experience shortness of breath or pain when taking a deep breath. A doctor will need to evaluate the cause of this fluid buildup.
+**Next Steps for Physician:** Depending on the size and patient symptoms, consider a diagnostic or therapeutic thoracentesis. Evaluate for underlying causes such as heart failure, infection, or malignancy.
+
+## 4. Atelectasis
+**Description:** A complete or partial collapse of the entire lung or area (lobe) of the lung.
+**Radiographic Findings:** Increased opacity of the affected lung, shifting of fissures, and potentially mediastinal shift toward the side of the collapse.
+**Patient Instructions:** Deep breathing exercises (often using an incentive spirometer) and walking are crucial to help re-expand the lung. If you have had recent surgery, use a pillow against your chest when coughing.
+**Next Steps for Physician:** Identify the cause of obstruction or compression (e.g., mucus plug, tumor, post-surgical hypoventilation). Encourage pulmonary toilet and consider bronchoscopy if persistent.
+
+## 5. Emphysema
+**Description:** Emphysema is a type of COPD involving damage to the air sacs (alveoli) in the lungs.
+**Radiographic Findings:** Hyperinflation of the lungs, flattened diaphragm, increased retrosternal airspace, and decreased lung markings (bullae may be present).
+**Patient Instructions:** Quit smoking immediately, as this is the primary cause. Avoid exposure to lung irritants. You may be prescribed inhalers to help open your airways.
+**Next Steps for Physician:** Perform pulmonary function tests (PFTs) to confirm obstructive pattern. Prescribe bronchodilators and refer to a smoking cessation program.
