@@ -52,6 +52,7 @@ frontend/dist/
 frontend/node_modules/
 frontend/build_error.txt
 frontend/.env.production
+frontend/inference-api/models/*.pt
 
 # Duplicate files
 backend/dockerignore
