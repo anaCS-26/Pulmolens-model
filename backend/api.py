@@ -15,6 +15,10 @@ import uuid
 import json
 import requests
 from dotenv import load_dotenv
+
+# --- INITIALIZATION: Load environment before any cloud clients ---
+load_dotenv()
+
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from azure.cosmos import CosmosClient
@@ -45,7 +49,7 @@ MCP_TOOL_DEFINITION = {
 
 app = FastAPI(title="PulmoLens API", description="AI-Assisted Radiographic Guidance API", version=API_VERSION)
 
-# Azure Configuration (Env Vars or Defaults for Dev)
+# --- CLOUD CLIENTS: Azure Configuration ---
 COSMOS_ENDPOINT = os.getenv("COSMOS_ENDPOINT")
 COSMOS_KEY = os.getenv("COSMOS_KEY")
 STORAGE_CONN_STR = os.getenv("STORAGE_CONN_STR")
@@ -59,25 +63,29 @@ try:
         cosmos_client = CosmosClient(COSMOS_ENDPOINT, COSMOS_KEY)
         database = cosmos_client.get_database_client("pulmolens-db")
         cosmos_container = database.get_container_client("feedback")
-        logger.info("Cosmos DB client initialized")
+        logger.info("✅ Cosmos DB client initialized")
     
     if STORAGE_CONN_STR:
         blob_service_client = BlobServiceClient.from_connection_string(STORAGE_CONN_STR)
         blob_container_client = blob_service_client.get_container_client("images")
-        logger.info("Blob Storage client initialized")
+        logger.info("✅ Blob Storage client initialized")
 except Exception as e:
-    logger.error(f"Error initializing Azure clients: {e}")
+    logger.error(f"⚠️ Azure client initialization warning: {e}")
 
-# Initialize RAG Components
-load_dotenv()
+# --- AI CLIENTS: RAG Components ---
+vector_store = None
+llm = None
+
 try:
+    # Use explicit model strings for new Gemini 2.0 releases
     rag_embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-2-preview")
     vector_store = PineconeVectorStore(index_name="pulmolens-guidelines", embedding=rag_embeddings)
-    # Using the most recent Gemini Flash Lite model!
-    llm = ChatGoogleGenerativeAI(model="gemini-flash-lite-latest")
-    logger.info("RAG components initialized (Gemini Flash Lite + Pinecone)")
+    
+    # Updated to the new high-efficiency Flash Lite model identifier
+    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite-preview-02-05")
+    logger.info("✅ RAG components initialized (Gemini 2.0 Flash Lite + Pinecone)")
 except Exception as e:
-    logger.error(f"Error initializing RAG components: {e}")
+    logger.error(f"❌ RAG initialization failure: {e}")
     vector_store = None
     llm = None
 
