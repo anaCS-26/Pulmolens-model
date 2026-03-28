@@ -35,24 +35,47 @@ It analyzes chest X-rays for 14 pathologies, provides visual explainability via 
 
 ---
 
-## 🏗️ How it Works
+## 🏗️ Technical Architecture
+
+### 1. Request-Response Workflow (Inference)
+This diagram illustrates the real-time path an image takes from upload to the final clinical report.
 
 ```mermaid
 graph TD
-    User([Doctor/User]) --> FE[React Frontend]
+    User([Clinician]) -->|Upload Image| FE[React Frontend]
     FE -->|POST /predict| BE[FastAPI Backend]
     
-    subgraph Vision
-        BE --> MODEL[AttentionDenseNet]
-        MODEL --> CAM[Grad-CAM++]
+    subgraph Cloud Infrastructure (Azure)
+        BE -->|JIT Model Download| BLOB[(Azure Blob Storage)]
+        BE -->|Audit Feedback| COSMOS[(Azure Cosmos DB)]
     end
     
-    subgraph RAG
-        MODEL -->|Findings| VDB[(Pinecone Vector DB)]
-        VDB -->|Guideline Context| LLM[Gemini Flash Lite]
+    subgraph AI Inference Pipeline
+        BE -->|Preprocessing| MODEL[AttentionDenseNet]
+        MODEL -->|14 Pathologies| PROBS[Probability Tensor]
+        MODEL -->|Features| CAM[Grad-CAM++]
+        CAM -->|Overlay| HEATMAP[Attention Heatmap]
     end
     
+    subgraph RAG Pipeline (LangChain)
+        PROBS -->|Top Findings| PINDEX[(Pinecone DB)]
+        PINDEX -->|Guideline Chunks| LLM[Gemini Flash Lite]
+        LLM -->|Expert Report| REPORT[Structured Synthesis]
+    end
+    
+    REPORT --> BE
+    HEATMAP --> BE
     BE -->|Combined AI Result| FE
+```
+
+### 2. Document Ingestion Pipeline (One-Time Setup)
+How medical guidelines are processed into the vector database.
+
+```mermaid
+graph LR
+    PDF[Clinical PDFs] -->|PyPDF Loader| SPLIT[Recursive Splitter]
+    SPLIT -->|Text Chunks| EMBED[Gemini Embeddings]
+    EMBED -->|768-Dim Vectors| PINDEX[(Pinecone Vector DB)]
 ```
 
 ---
