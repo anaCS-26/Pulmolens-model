@@ -1,0 +1,48 @@
+name: pulmolens-container
+properties:
+  configuration:
+    activeRevisionsMode: Single
+    ingress:
+      external: true
+      targetPort: 8000
+      transport: Auto
+    registries:
+    - server: pulmolensacr.azurecr.io
+      username: pulmolensacr
+      passwordSecretRef: pulmolensacrazurecrio-pulmolensacr
+    secrets:
+    - name: model-sas-url
+    - name: pinecone-api-key
+    - name: google-api-key
+    - name: cosmos-key
+    - name: storage-conn-str
+  template:
+    containers:
+    - name: pulmolens-container
+      image: pulmolensacr.azurecr.io/pulmolens-backend:latest
+      env:
+      - name: COSMOS_ENDPOINT
+        value: https://pulmolens-cosmos-prod.documents.azure.com:443/
+      - name: COSMOS_KEY
+        secretRef: cosmos-key
+      - name: STORAGE_CONN_STR
+        secretRef: storage-conn-str
+      - name: GOOGLE_API_KEY
+        secretRef: google-api-key
+      - name: PINECONE_API_KEY
+        secretRef: pinecone-api-key
+      - name: MODEL_PATH
+        value: /app/ml/models/attention_densenet_asl_20251121_213351_best.pth
+      resources:
+        cpu: 1.0
+        memory: 2Gi
+      volumeMounts:
+      - mountPath: /app/ml/models
+        volumeName: model-volume
+    scale:
+      minReplicas: 0
+      maxReplicas: 10
+    volumes:
+    - name: model-volume
+      storageName: model-storage-mount
+      storageType: AzureFile

@@ -173,8 +173,8 @@ try:
     if not os.path.exists(MODEL_PATH) and sas_url:
         download_model(sas_url, MODEL_PATH)
 
-    # 2. Initialize and Load
-    model = AttentionDenseNet(num_classes=14)
+    # 2. Initialize and Load (disable default pretrained weights as we load a custom checkpoint)
+    model = AttentionDenseNet(num_classes=14, pretrained=False)
     if os.path.exists(MODEL_PATH):
         checkpoint = torch.load(MODEL_PATH, map_location=device, weights_only=False)
         if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:

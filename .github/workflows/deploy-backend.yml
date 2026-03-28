@@ -2,7 +2,7 @@ name: Deploy Backend to Container App
 on:
   push:
     branches: [ main ]
-    paths: [ 'backend/**' ]
+    paths: [ 'backend/**', 'infra/**' ]
 
 jobs:
   build-and-deploy:
@@ -27,3 +27,4 @@ jobs:
           containerAppName: pulmolens-container
           resourceGroup: PulmoLense
           imageToDeploy: ${{ secrets.AZURE_ACR_NAME }}.azurecr.io/pulmolens-backend:${{ github.sha }}
+          yamlConfigPath: infra/aca-config.yaml
