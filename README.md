@@ -25,8 +25,12 @@ It analyzes chest X-rays for 14 pathologies, provides visual explainability via 
 - **Clinical Grounding**: Built a RAG pipeline using **LangChain**, **Google Gemini**, and **Pinecone**. It retrieves relevant sections from BTS and NICE clinical guidelines to back up every report.
 - **Uncertainty Protocol**: Implemented a logic gate where the system detects low-confidence predictions and automatically shifts its tone to a "cautious consultant," recommending further clinical correlation.
 
-### ☁️ 3. Cloud-Native Architecture (Azure)
-- **Serverless Backend**: FASTApi hosted on **Azure Container Apps** for rapid scaling and cost-efficiency.
+### ☁️ Cloud-Native Deployment (Azure)
+- **Backend**: Containerized FastAPI (Python) on **Azure Container Apps** (Scale-to-Zero optimized).
+- **Frontend**: React (TypeScript) on **Azure Static Web Apps**.
+- **Database**: **Azure Cosmos DB** (NoSQL) for audit logging and feedback loops.
+- **Storage**: **Azure Blob Storage** for versioned model weights and clinical imaging.
+- **Optimization**: The infrastructure is set to a lean, cost-efficient state with development and training data (50k+ images) archived to minimize overhead.
 - **Model Registry Pattern**: Large model weights (~500MB) are streamed from **Azure Blob Storage** via time-limited SAS URLs during container boot, keeping Docker images lightweight and portable.
 - **Infrastructure as Code (IaC)**: Deployments are fully reproducible using **Azure Bicep** templates for storage, logs, and compute.
 
