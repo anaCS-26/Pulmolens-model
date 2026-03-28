@@ -37,45 +37,30 @@ It analyzes chest X-rays for 14 pathologies, provides visual explainability via 
 
 ## 🏗️ Technical Architecture
 
-### 1. Request-Response Workflow (Inference)
-This diagram illustrates the real-time path an image takes from upload to the final clinical report.
+This diagram illustrates how an image is processed: from the initial upload to the dual-pipeline analysis (Deep Learning + RAG) and finally to the expert clinical report.
 
 ```mermaid
 graph TD
-    User([Clinician]) -->|Upload Image| FE[React Frontend]
+    User([Clinician/User]) -->|Upload X-Ray| FE[React Frontend]
     FE -->|POST /predict| BE[FastAPI Backend]
     
-    subgraph Cloud Infrastructure (Azure)
-        BE -->|JIT Model Download| BLOB[(Azure Blob Storage)]
-        BE -->|Audit Feedback| COSMOS[(Azure Cosmos DB)]
+    subgraph "Azure Cloud Layer"
+        BE <--> BLOB[(Blob Storage)]
+        BE --> COSMOS[(Cosmos DB)]
     end
     
-    subgraph AI Inference Pipeline
-        BE -->|Preprocessing| MODEL[AttentionDenseNet]
-        MODEL -->|14 Pathologies| PROBS[Probability Tensor]
-        MODEL -->|Features| CAM[Grad-CAM++]
-        CAM -->|Overlay| HEATMAP[Attention Heatmap]
-    end
-    
-    subgraph RAG Pipeline (LangChain)
-        PROBS -->|Top Findings| PINDEX[(Pinecone DB)]
-        PINDEX -->|Guideline Chunks| LLM[Gemini Flash Lite]
-        LLM -->|Expert Report| REPORT[Structured Synthesis]
+    subgraph "AI Analysis Pipeline"
+        BE --> MODEL[AttentionDenseNet]
+        MODEL --> HEATMAP[Grad-CAM++ Heatmap]
+        
+        MODEL -->|"Pathology Results"| PINDEX[(Pinecone DB)]
+        PINDEX -->|"Guidelines Retrieval"| LLM[Gemini Flash Lite]
+        LLM --> REPORT[Clinical Report]
     end
     
     REPORT --> BE
     HEATMAP --> BE
-    BE -->|Combined AI Result| FE
-```
-
-### 2. Document Ingestion Pipeline (One-Time Setup)
-How medical guidelines are processed into the vector database.
-
-```mermaid
-graph LR
-    PDF[Clinical PDFs] -->|PyPDF Loader| SPLIT[Recursive Splitter]
-    SPLIT -->|Text Chunks| EMBED[Gemini Embeddings]
-    EMBED -->|768-Dim Vectors| PINDEX[(Pinecone Vector DB)]
+    BE -->|Combined Result| FE
 ```
 
 ---
