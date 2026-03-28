@@ -1,0 +1,29 @@
+name: Deploy Backend to Container App
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'backend/**' ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v3
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build and Push Docker Image
+        run: |
+          az acr build --registry ${{ secrets.AZURE_ACR_NAME }} --image pulmolens-backend:${{ github.sha }} ./backend
+
+      - name: Deploy to Azure Container App
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          acrName: ${{ secrets.AZURE_ACR_NAME }}
+          containerAppName: pulmolens-container
+          resourceGroup: PulmoLense
+          imageToDeploy: ${{ secrets.AZURE_ACR_NAME }}.azurecr.io/pulmolens-backend:${{ github.sha }}
