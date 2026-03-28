@@ -3,7 +3,8 @@ import numpy as np
 import torch
 import cv2
 import base64
-from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter
+import binascii
+from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -33,6 +34,12 @@ logger = logging.getLogger("pulmolens")
 logging.basicConfig(level=logging.INFO)
 
 API_VERSION = "1.0.0"
+MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
+Image.MAX_IMAGE_PIXELS = int(os.getenv("MAX_IMAGE_PIXELS", "40000000"))
+RAG_ENABLED = os.getenv("RAG_ENABLED", "true").strip().lower() == "true"
+RAG_MIN_TOP_PROB = float(os.getenv("RAG_MIN_TOP_PROB", "0.5"))
+ALLOW_UNSAFE_MODEL_DESERIALIZATION = os.getenv("ALLOW_UNSAFE_MODEL_DESERIALIZATION", "false").strip().lower() == "true"
+MCP_API_KEY = os.getenv("MCP_API_KEY")
 
 # --- MCP: Model Context Protocol Tool Interface ---
 MCP_TOOL_DEFINITION = {
@@ -115,13 +122,26 @@ async def submit_feedback(
     details: Optional[str] = Form(None),
     predictions: Optional[str] = Form(None) # JSON string
 ):
+    if rating not in {"good", "bad"}:
+        raise HTTPException(status_code=400, detail="rating must be 'good' or 'bad'")
+
+    contents = await file.read()
+    _read_and_validate_upload(contents, file.content_type)
+
+    parsed_predictions = None
+    if predictions:
+        try:
+            parsed_predictions = json.loads(predictions)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="predictions must be valid JSON")
+
     # Upload to Blob Storage
     blob_url = None
     if blob_container_client:
         try:
-            # Reset file pointer if needed, though usually fresh from upload
-            blob_name = f"{uuid.uuid4()}_{file.filename}"
-            blob_container_client.upload_blob(blob_name, file.file)
+            ext = _extension_from_content_type(file.content_type)
+            blob_name = f"{uuid.uuid4()}.{ext}"
+            blob_container_client.upload_blob(blob_name, contents, overwrite=False, content_type=file.content_type)
             blob_url = blob_container_client.get_blob_client(blob_name).url
             logger.info(f"Image uploaded to blob: {blob_url}")
         except Exception as e:
@@ -135,7 +155,7 @@ async def submit_feedback(
                 "image_id": blob_url or "upload_failed", # Store blob URL as image_id
                 "rating": rating,
                 "details": details,
-                "predictions": json.loads(predictions) if predictions else None,
+                "predictions": parsed_predictions,
                 "timestamp": datetime.utcnow().isoformat()
             }
             cosmos_container.create_item(body=item)
@@ -160,6 +180,28 @@ def download_model(url, path):
         logger.critical(f"Model download failed: {e}")
         raise e
 
+
+def _read_and_validate_upload(contents: bytes, content_type: str):
+    if not content_type or not content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+    if not contents:
+        raise HTTPException(status_code=400, detail="Empty upload")
+    if len(contents) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Max allowed size is {MAX_UPLOAD_BYTES // (1024 * 1024)} MB."
+        )
+
+
+def _extension_from_content_type(content_type: str) -> str:
+    mapping = {
+        "image/jpeg": "jpg",
+        "image/jpg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp"
+    }
+    return mapping.get((content_type or "").lower(), "bin")
+
 # Load PyTorch model
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Default to relative path for Local Dev, but allow env override for Cloud
@@ -176,7 +218,11 @@ try:
     # 2. Initialize and Load (disable default pretrained weights as we load a custom checkpoint)
     model = AttentionDenseNet(num_classes=14, pretrained=False)
     if os.path.exists(MODEL_PATH):
-        checkpoint = torch.load(MODEL_PATH, map_location=device, weights_only=False)
+        if ALLOW_UNSAFE_MODEL_DESERIALIZATION:
+            logger.warning("Unsafe model deserialization enabled via ALLOW_UNSAFE_MODEL_DESERIALIZATION=true")
+            checkpoint = torch.load(MODEL_PATH, map_location=device, weights_only=False)
+        else:
+            checkpoint = torch.load(MODEL_PATH, map_location=device, weights_only=True)
         if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
             model.load_state_dict(checkpoint['model_state_dict'])
         else:
@@ -247,15 +293,13 @@ async def warmup():
 async def predict(file: UploadFile = File(...)):
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
-        
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="File must be an image")
     
     # Initialize response variables to avoid UnboundLocalError
     clinical_report = "Analysis complete."
     cited_sources = []
     
     contents = await file.read()
+    _read_and_validate_upload(contents, file.content_type)
     input_tensor, img_float, image = preprocess_image(contents)
     input_tensor = input_tensor.to(device)
     
@@ -309,7 +353,10 @@ async def predict(file: UploadFile = File(...)):
     top_findings = [cls_name for cls_name, prob in results.items() if prob > 0.4]
     
     # We still want RAG/LLM to explain if results are low confidence
-    if vector_store and llm:
+    sorted_probs = sorted(probs, reverse=True)
+    max_prob = sorted_probs[0] if len(sorted_probs) > 0 else 0
+
+    if vector_store and llm and RAG_ENABLED and max_prob >= RAG_MIN_TOP_PROB:
         try:
             # 1. Retrieval
             search_query = " ".join(top_findings) if top_findings else "no findings indeterminate"
@@ -318,9 +365,6 @@ async def predict(file: UploadFile = File(...)):
             
             # --- AGENTIC GATE: Confidence Check (Deterministic Flow) ---
             # If the top finding is below 40% (empty top_findings), we trigger the 'Uncertainty Agent'
-            sorted_probs = sorted(probs, reverse=True)
-            max_prob = sorted_probs[0] if len(sorted_probs) > 0 else 0
-            
             if len(top_findings) == 0:
                 prompt_task = "The model did NOT detect any specific pathology with high confidence (all below 40%). Explain that the image is indeterminate/clear and provide general preventative advice for chest health."
                 guidance_tone = "Cautious, reassurance-focused."
@@ -380,6 +424,13 @@ async def predict(file: UploadFile = File(...)):
             logger.error(f"RAG pipeline error: {e}")
             clinical_report = f"Detected {', '.join(top_findings)}. (RAG explanation temporarily unavailable)."
             cited_sources = []
+    elif not RAG_ENABLED:
+        clinical_report = "RAG explanation is disabled for this deployment."
+    elif max_prob < RAG_MIN_TOP_PROB:
+        clinical_report = (
+            f"Top confidence ({max_prob*100:.1f}%) is below the RAG threshold "
+            f"({RAG_MIN_TOP_PROB*100:.1f}%), so guideline generation was skipped to reduce cost."
+        )
 
     return {
         "predictions": results,
@@ -397,27 +448,37 @@ async def get_mcp_tools():
     return {"tools": [MCP_TOOL_DEFINITION]}
 
 @app.post("/mcp/analyze")
-async def mcp_analyze(request: dict):
+async def mcp_analyze(request: dict, x_api_key: Optional[str] = Header(default=None, alias="x-api-key")):
     """Execute analysis via MCP protocol"""
     try:
+        if MCP_API_KEY and x_api_key != MCP_API_KEY:
+            raise HTTPException(status_code=401, detail="Unauthorized MCP request")
+
         image_b64 = request.get("image_b64")
         if not image_b64: return {"error": "No image_b64 found"}
         
         # Decode and wrap in mock UploadFile
-        img_bytes = base64.b64decode(image_b64)
+        try:
+            img_bytes = base64.b64decode(image_b64, validate=True)
+        except (binascii.Error, ValueError):
+            return {"error": "Invalid base64 image payload"}
+
+        _read_and_validate_upload(img_bytes, "image/jpeg")
         from fastapi import UploadFile
         import io
         mock_file = UploadFile(filename="mcp_input.jpg", file=io.BytesIO(img_bytes))
         
         result = await predict(mock_file)
+        high_conf = [name for name, prob in result["predictions"].items() if prob > 0.5]
         return {
             "content": [
                 {"type": "text", "text": f"PulmoLens Analysis Result: {result['report']}"},
-                {"type": "text", "text": f"Findings summary: {', '.join([p['label'] for p in result['predictions'] if p['prob'] > 0.5])}"}
+                {"type": "text", "text": f"Findings summary: {', '.join(high_conf) if high_conf else 'No high-confidence findings'}"}
             ]
         }
     except Exception as e:
-        return {"error": str(e)}
+        logger.exception("MCP analyze failed: %s", e)
+        return {"error": "Analysis failed"}
 
 # Include router at root and /api
 app.include_router(router)

@@ -4,7 +4,7 @@
 Write-Host "Searching for orphaned PulmoLens Log Analytics workspaces..." -ForegroundColor Cyan
 
 # 1. List all PulmoLens workspaces
-$workspaces = az monitor log-analytics workspace list --query "[?contains(name, 'pulmoense')].{Name:name, RG:resourceGroup, ID:id}" -o json | ConvertFrom-Json
+$workspaces = az monitor log-analytics workspace list --query "[?contains(to_string(name), 'pulmolens')].{Name:name, RG:resourceGroup, ID:id}" -o json | ConvertFrom-Json
 
 if ($workspaces.Count -eq 0) {
     Write-Host "No orphaned PulmoLens workspaces found. Everything is clean!" -ForegroundColor Green

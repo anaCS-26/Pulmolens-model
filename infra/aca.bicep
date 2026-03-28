@@ -17,6 +17,7 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2021-06-01' = {
     sku: {
       name: 'PerGB2018'
     }
+    retentionInDays: 30
   }
 }
 
@@ -43,6 +44,7 @@ resource backend 'Microsoft.App/containerApps@2022-03-01' = {
       ingress: {
         external: true
         targetPort: 8000
+        allowInsecure: false
       }
     }
     template: {

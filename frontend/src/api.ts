@@ -8,9 +8,8 @@ export interface AnalyzeResp {
   sources?: string[]; // Metadata citations
 }
 
-// Use the local env var for testing, or default to localhost since we are running uvicorn locally now!
-// When you re-deploy to Azure, this should point back to the Azure Container App URL.
-const API_BASE_URL = "https://pulmolens-container.jollymushroom-d4a6f563.canadacentral.azurecontainerapps.io";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL?.trim() || "http://localhost:8000";
 
 export async function warmup() {
   try {

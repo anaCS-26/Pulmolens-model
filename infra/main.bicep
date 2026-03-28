@@ -1,7 +1,7 @@
 // PulmoLens Enterprise Infrastructure - Azure Bicep Template
 targetScope = 'subscription'
 
-param location string = 'eastus'
+param location string = 'canadacentral'
 param projectName string = 'pulmolens'
 param environment string = 'prod'
 

@@ -10,7 +10,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   kind: 'StorageV2'
   properties: {
     accessTier: 'Hot'
-    allowBlobPublicAccess: true
+    allowBlobPublicAccess: false
   }
 }
 
@@ -22,11 +22,17 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2022-09-01'
 resource imageContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
   parent: blobService
   name: 'images'
+  properties: {
+    publicAccess: 'None'
+  }
 }
 
 resource modelContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2022-09-01' = {
   parent: blobService
   name: 'models'
+  properties: {
+    publicAccess: 'None'
+  }
 }
 
 output storageAccountName string = storageAccount.name
