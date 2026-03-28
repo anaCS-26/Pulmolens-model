@@ -12,10 +12,15 @@ properties:
       passwordSecretRef: pulmolensacrazurecrio-pulmolensacr
     secrets:
     - name: model-sas-url
+      value: ${MODEL_SAS_URL}
     - name: pinecone-api-key
+      value: ${PINECONE_API_KEY}
     - name: google-api-key
+      value: ${GOOGLE_API_KEY}
     - name: cosmos-key
+      value: ${COSMOS_KEY}
     - name: storage-conn-str
+      value: ${STORAGE_CONN_STR}
   template:
     containers:
     - name: pulmolens-container

@@ -22,6 +22,12 @@ jobs:
 
       - name: Deploy to Azure Container App
         uses: azure/container-apps-deploy-action@v1
+        env:
+          MODEL_SAS_URL: ${{ secrets.MODEL_SAS_URL }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          COSMOS_KEY: ${{ secrets.COSMOS_KEY }}
+          STORAGE_CONN_STR: ${{ secrets.STORAGE_CONN_STR }}
         with:
           acrName: ${{ secrets.AZURE_ACR_NAME }}
           containerAppName: pulmolens-container
