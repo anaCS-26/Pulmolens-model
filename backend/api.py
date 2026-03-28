@@ -228,6 +228,13 @@ async def health_check():
         raise HTTPException(status_code=503, detail="Model not loaded")
     return {"status": "healthy", "model": "loaded (PyTorch)", "version": API_VERSION}
 
+@router.get("/warmup")
+async def warmup():
+    """Trigger container spin-up and model loading if needed"""
+    if model is None:
+        return {"status": "warming", "message": "Model is loading..."}
+    return {"status": "ready", "message": "Model is ready"}
+
 @router.post("/predict")
 async def predict(file: UploadFile = File(...)):
     if model is None:
@@ -290,27 +297,34 @@ async def predict(file: UploadFile = File(...)):
     blob_url = None 
     
     # --- RAG PIPELINE: GENERATE REPORT ---
+    # Trigger RAG even for low confidence but adjust the logic
     top_findings = [cls_name for cls_name, prob in results.items() if prob > 0.4]
-    clinical_report = "The AI vision model did not detect any major pathologies with high confidence."
     
-    if top_findings and vector_store and llm:
+    # We still want RAG/LLM to explain if results are low confidence
+    if vector_store and llm:
         try:
             # 1. Retrieval
-            search_query = " ".join(top_findings)
+            search_query = " ".join(top_findings) if top_findings else "no findings indeterminate"
             retrieved_docs = vector_store.similarity_search(search_query, k=3)
             context = "\n\n".join([doc.page_content for doc in retrieved_docs])
             
             # --- AGENTIC GATE: Confidence Check (Deterministic Flow) ---
-            # If the top finding is below 50% confidence, we trigger the 'Uncertainty Agent'
+            # If the top finding is below 40% (empty top_findings), we trigger the 'Uncertainty Agent'
             sorted_probs = sorted(probs, reverse=True)
-            is_low_confidence = sorted_probs[0] < 0.5 if len(sorted_probs) > 0 else True
+            max_prob = sorted_probs[0] if len(sorted_probs) > 0 else 0
             
-            if is_low_confidence:
-                prompt_task = "The model is UNCERTAIN (confidence < 50%). Explain that the image quality or features are indeterminate and suggest a higher-fidelity scan or clinical correlation to confirm findings."
-                guidance_tone = "Cautious, seeking more data."
+            if len(top_findings) == 0:
+                prompt_task = "The model did NOT detect any specific pathology with high confidence (all below 40%). Explain that the image is indeterminate/clear and provide general preventative advice for chest health."
+                guidance_tone = "Cautious, reassurance-focused."
+                vision_analysis = "No significant abnormalities detected above threshold."
+            elif max_prob < 0.5:
+                prompt_task = f"The model is UNCERTAIN (highest finding '{top_findings[0]}' is only {max_prob*100:.1f}%). Explain the indeterminate features and suggest follow-up imaging."
+                guidance_tone = "Cautious, seeking clinical correlation."
+                vision_analysis = f"Marginal detection for {', '.join(top_findings)}."
             else:
-                prompt_task = f"The core detection is {top_findings[0]}. Provide an expert radiographic signature and management plan based on the guidelines."
+                prompt_task = f"The core detection is {top_findings[0]} (confidence {max_prob*100:.1f}%). Provide an expert radiographic signature and management plan based on the guidelines."
                 guidance_tone = "Authoritative, expert consultant."
+                vision_analysis = f"High confidence in {', '.join(top_findings)}."
 
             # 2. Generation Prompt - Senior Expert Persona Implementation
             prompt = f"""
@@ -318,7 +332,7 @@ async def predict(file: UploadFile = File(...)):
             TASK: {prompt_task}
             TONE: {guidance_tone}
             
-            VISION ANALYSIS: {', '.join(top_findings)}
+            VISION ANALYSIS: {vision_analysis}
             
             STRUCTURE YOUR RESPONSE AS FOLLOWS:
             **Radiographic Signature**: [Visual cues]
@@ -387,7 +401,7 @@ async def mcp_analyze(request: dict):
         import io
         mock_file = UploadFile(filename="mcp_input.jpg", file=io.BytesIO(img_bytes))
         
-        result = await analyze(mock_file)
+        result = await predict(mock_file)
         return {
             "content": [
                 {"type": "text", "text": f"PulmoLens Analysis Result: {result['report']}"},

@@ -45,7 +45,11 @@ export default function App() {
   const [serverPreds, setServerPreds] = useState<Record<string, number> | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  useEffect(() => { runDevChecks(); }, []);
+  useEffect(() => { 
+    runDevChecks(); 
+    // Warmup the backend as soon as the app loads to mitigate cold starts
+    import("./api").then(({ warmup }) => warmup());
+  }, []);
 
   // predictions — ONLY from server
   const predictions = useMemo(() => {
