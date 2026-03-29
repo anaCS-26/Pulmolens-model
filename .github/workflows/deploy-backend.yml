@@ -20,6 +20,16 @@ jobs:
         run: |
           az acr build --registry ${{ secrets.AZURE_ACR_NAME }} --image pulmolens-backend:${{ github.sha }} ./backend
 
+      - name: Validate required secrets are present
+        shell: bash
+        run: |
+          test -n "${{ secrets.MODEL_SAS_URL }}" || (echo "MODEL_SAS_URL missing" && exit 1)
+          test -n "${{ secrets.PINECONE_API_KEY }}" || (echo "PINECONE_API_KEY missing" && exit 1)
+          test -n "${{ secrets.GOOGLE_API_KEY }}" || (echo "GOOGLE_API_KEY missing" && exit 1)
+          test -n "${{ secrets.COSMOS_KEY }}" || (echo "COSMOS_KEY missing" && exit 1)
+          test -n "${{ secrets.STORAGE_CONN_STR }}" || (echo "STORAGE_CONN_STR missing" && exit 1)
+          test -n "${{ secrets.AZURE_ACR_NAME }}" || (echo "AZURE_ACR_NAME missing" && exit 1)
+
       - name: Deploy to Azure Container App
         uses: azure/container-apps-deploy-action@v1
         env:

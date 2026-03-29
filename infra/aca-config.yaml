@@ -6,10 +6,6 @@ properties:
       external: true
       targetPort: 8000
       transport: Auto
-    registries:
-    - server: pulmolensacr.azurecr.io
-      username: pulmolensacr
-      passwordSecretRef: pulmolensacrazurecrio-pulmolensacr
     secrets:
     - name: model-sas-url
       value: ${MODEL_SAS_URL}
@@ -36,6 +32,8 @@ properties:
         secretRef: google-api-key
       - name: PINECONE_API_KEY
         secretRef: pinecone-api-key
+      - name: MODEL_SAS_URL
+        secretRef: model-sas-url
       - name: MODEL_PATH
         value: /app/ml/models/attention_densenet_asl_20251121_213351_best.pth
       resources:
