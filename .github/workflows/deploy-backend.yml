@@ -25,13 +25,11 @@ jobs:
           STORAGE_CONN_STR: ${{ secrets.STORAGE_CONN_STR }}
         run: |
           missing=()
-          [ -z "$AZURE_CREDENTIALS" ] && missing+=("AZURE_CREDENTIALS")
-          [ -z "$AZURE_ACR_NAME" ] && missing+=("AZURE_ACR_NAME")
-          [ -z "$MODEL_SAS_URL" ] && missing+=("MODEL_SAS_URL")
-          [ -z "$PINECONE_API_KEY" ] && missing+=("PINECONE_API_KEY")
-          [ -z "$GOOGLE_API_KEY" ] && missing+=("GOOGLE_API_KEY")
-          [ -z "$COSMOS_KEY" ] && missing+=("COSMOS_KEY")
-          [ -z "$STORAGE_CONN_STR" ] && missing+=("STORAGE_CONN_STR")
+          for v in AZURE_CREDENTIALS AZURE_ACR_NAME MODEL_SAS_URL PINECONE_API_KEY GOOGLE_API_KEY COSMOS_KEY STORAGE_CONN_STR; do
+            if [ -z "${!v}" ]; then
+              missing+=("$v")
+            fi
+          done
 
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "deploy_ok=false" >> "$GITHUB_OUTPUT"
@@ -57,16 +55,45 @@ jobs:
         run: |
           az acr build --registry ${{ secrets.AZURE_ACR_NAME }} --image pulmolens-backend:${{ github.sha }} ./backend
 
-      - name: Validate required secrets are present
+      - name: Configure Container App ACR pull via managed identity
         if: steps.deploy_secrets.outputs.deploy_ok == 'true'
         shell: bash
+        env:
+          ACR_NAME: ${{ secrets.AZURE_ACR_NAME }}
         run: |
-          test -n "${{ secrets.MODEL_SAS_URL }}" || (echo "MODEL_SAS_URL missing" && exit 1)
-          test -n "${{ secrets.PINECONE_API_KEY }}" || (echo "PINECONE_API_KEY missing" && exit 1)
-          test -n "${{ secrets.GOOGLE_API_KEY }}" || (echo "GOOGLE_API_KEY missing" && exit 1)
-          test -n "${{ secrets.COSMOS_KEY }}" || (echo "COSMOS_KEY missing" && exit 1)
-          test -n "${{ secrets.STORAGE_CONN_STR }}" || (echo "STORAGE_CONN_STR missing" && exit 1)
-          test -n "${{ secrets.AZURE_ACR_NAME }}" || (echo "AZURE_ACR_NAME missing" && exit 1)
+          ACR_ID=$(az acr show --name "$ACR_NAME" --query id -o tsv)
+          ACR_SERVER=$(az acr show --name "$ACR_NAME" --query loginServer -o tsv)
+
+          az containerapp identity assign \
+            --name pulmolens-container \
+            --resource-group PulmoLense \
+            --system-assigned
+
+          PRINCIPAL_ID=$(az containerapp show \
+            --name pulmolens-container \
+            --resource-group PulmoLense \
+            --query identity.principalId -o tsv)
+
+          EXISTING=$(az role assignment list \
+            --assignee-object-id "$PRINCIPAL_ID" \
+            --assignee-principal-type ServicePrincipal \
+            --scope "$ACR_ID" \
+            --role AcrPull \
+            --query "[0].id" -o tsv)
+
+          if [ -z "$EXISTING" ]; then
+            az role assignment create \
+              --assignee-object-id "$PRINCIPAL_ID" \
+              --assignee-principal-type ServicePrincipal \
+              --scope "$ACR_ID" \
+              --role AcrPull
+          fi
+
+          az containerapp registry set \
+            --name pulmolens-container \
+            --resource-group PulmoLense \
+            --server "$ACR_SERVER" \
+            --identity system
 
       - name: Deploy to Azure Container App
         if: steps.deploy_secrets.outputs.deploy_ok == 'true'
