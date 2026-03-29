@@ -7,20 +7,58 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Checkout Source
         uses: actions/checkout@v3
 
+      - name: Check required deploy secrets
+        id: deploy_secrets
+        shell: bash
+        env:
+          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+          AZURE_ACR_NAME: ${{ secrets.AZURE_ACR_NAME }}
+          MODEL_SAS_URL: ${{ secrets.MODEL_SAS_URL }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          COSMOS_KEY: ${{ secrets.COSMOS_KEY }}
+          STORAGE_CONN_STR: ${{ secrets.STORAGE_CONN_STR }}
+        run: |
+          missing=()
+          [ -z "$AZURE_CREDENTIALS" ] && missing+=("AZURE_CREDENTIALS")
+          [ -z "$AZURE_ACR_NAME" ] && missing+=("AZURE_ACR_NAME")
+          [ -z "$MODEL_SAS_URL" ] && missing+=("MODEL_SAS_URL")
+          [ -z "$PINECONE_API_KEY" ] && missing+=("PINECONE_API_KEY")
+          [ -z "$GOOGLE_API_KEY" ] && missing+=("GOOGLE_API_KEY")
+          [ -z "$COSMOS_KEY" ] && missing+=("COSMOS_KEY")
+          [ -z "$STORAGE_CONN_STR" ] && missing+=("STORAGE_CONN_STR")
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "deploy_ok=false" >> "$GITHUB_OUTPUT"
+            echo "missing=${missing[*]}" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy_ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip deploy when secrets are missing
+        if: steps.deploy_secrets.outputs.deploy_ok != 'true'
+        run: |
+          echo "Skipping Azure deploy because required secrets are missing:"
+          echo "${{ steps.deploy_secrets.outputs.missing }}"
+
       - name: Azure Login
+        if: steps.deploy_secrets.outputs.deploy_ok == 'true'
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Build and Push Docker Image
+        if: steps.deploy_secrets.outputs.deploy_ok == 'true'
         run: |
           az acr build --registry ${{ secrets.AZURE_ACR_NAME }} --image pulmolens-backend:${{ github.sha }} ./backend
 
       - name: Validate required secrets are present
+        if: steps.deploy_secrets.outputs.deploy_ok == 'true'
         shell: bash
         run: |
           test -n "${{ secrets.MODEL_SAS_URL }}" || (echo "MODEL_SAS_URL missing" && exit 1)
@@ -31,6 +69,7 @@ jobs:
           test -n "${{ secrets.AZURE_ACR_NAME }}" || (echo "AZURE_ACR_NAME missing" && exit 1)
 
       - name: Deploy to Azure Container App
+        if: steps.deploy_secrets.outputs.deploy_ok == 'true'
         uses: azure/container-apps-deploy-action@v1
         env:
           MODEL_SAS_URL: ${{ secrets.MODEL_SAS_URL }}
