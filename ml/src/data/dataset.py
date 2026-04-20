@@ -31,9 +31,13 @@ class NIHChestXrayDataset(Dataset):
         else:
             raise FileNotFoundError(f"Image {img_name} not found")
             
-        # Load image using PIL to handle ICC profile warnings better
-        image = Image.open(img_path).convert('RGB')
-        image = np.array(image)
+        try:
+            # Load image using PIL to handle ICC profile warnings better
+            image = Image.open(img_path).convert('RGB')
+            image = np.array(image)
+        except Exception as e:
+            print(f"Warning: Failed to load {img_name} (likely corrupted). Using blank image. Error: {e}")
+            image = np.zeros((1024, 1024, 3), dtype=np.uint8)
         
         # Apply transforms
         if self.transform:

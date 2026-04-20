@@ -11,7 +11,13 @@ from src.models.densenet import AttentionDenseNet, DenseNet121
 from src.data.dataset import get_data_loaders
 
 def evaluate_test(model_path, thresholds_path):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    try:
+        import torch_directml
+        device = torch_directml.device()
+        print("Using AMD GPU via DirectML!")
+    except ImportError:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Using device: {device}")
     
     # Load thresholds
     if os.path.exists(thresholds_path):
@@ -24,7 +30,7 @@ def evaluate_test(model_path, thresholds_path):
         
     # Load model
     # Check config in checkpoint to determine model type
-    checkpoint = torch.load(model_path, map_location=device, weights_only=False)
+    checkpoint = torch.load(model_path, map_location='cpu', weights_only=False)
     if 'config' in checkpoint:
         model_type = checkpoint['config'].get('model_type', 'attention_densenet')
     else:

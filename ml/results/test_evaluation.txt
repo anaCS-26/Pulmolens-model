@@ -1,0 +1,23 @@
+Mean AUC: 0.8511
+
+                    precision    recall  f1-score   support
+
+       Atelectasis       0.24      0.82      0.37      1155
+      Cardiomegaly       0.17      0.66      0.27       261
+          Effusion       0.32      0.87      0.47      1369
+      Infiltration       0.24      0.91      0.38      2129
+              Mass       0.23      0.64      0.34       551
+            Nodule       0.20      0.63      0.30       684
+         Pneumonia       0.06      0.20      0.09       164
+      Pneumothorax       0.27      0.72      0.40       549
+     Consolidation       0.16      0.59      0.25       550
+             Edema       0.14      0.67      0.23       248
+         Emphysema       0.30      0.74      0.43       279
+          Fibrosis       0.10      0.40      0.17       178
+Pleural_Thickening       0.16      0.53      0.25       345
+            Hernia       0.26      0.50      0.34        32
+
+         micro avg       0.23      0.76      0.35      8494
+         macro avg       0.20      0.63      0.31      8494
+      weighted avg       0.23      0.76      0.35      8494
+       samples avg       0.18      0.36      0.22      8494

@@ -9,8 +9,9 @@ This directory contains trained model checkpoints and deployment artifacts.
 - **Architecture**: DenseNet121 + CBAM (Convolutional Block Attention Module)
 - **Loss Function**: Asymmetric Loss (ASL)
 - **Performance**:
-    - **Weighted Recall**: 0.50
-    - **Weighted F1**: 0.41
+    - **Mean AUC**: 0.8511
+    - **Weighted Recall**: 0.76
+    - **Weighted F1**: 0.35
     - **Focus**: Optimized for high sensitivity (Recall) to minimize missed diagnoses.
 
 ### 2. ONNX Deployment Model
