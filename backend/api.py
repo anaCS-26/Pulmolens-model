@@ -390,26 +390,24 @@ async def predict(file: UploadFile = File(...)):
                 prompt_task = f"The primary detection is {sorted_all_findings[0][0]} (confidence {max_prob*100:.1f}%). Provide expert radiographic signature and management plan."
                 vision_summary = f"High confidence in {sorted_all_findings[0][0]}."
 
-            # 2. Generation Prompt - Explicit Data Separation & Chain-of-Thought
+            # 2. Generation Prompt - Professional Persona & Internal Knowledge Fallback
             prompt = f"""
-            ### RAW VISION ANALYSIS DATA (GROUND TRUTH)
-            {formatted_vision_data}
+            [INTERNAL DATA - DO NOT REFERENCE BY NAME IN OUTPUT]
+            FINDINGS: {formatted_vision_data}
+            RELEVANT_GUIDELINES: {context}
             
-            ### TASK
-            {prompt_task}
+            ### INSTRUCTIONS for Senior Radiographic Consultant
+            You are providing a clinical interpretation of a chest X-ray. 
             
-            ### CONTEXTUAL GUIDELINES
-            {context}
-            
-            ### INSTRUCTIONS
-            1. Use ONLY the RAW VISION ANALYSIS DATA to identify the findings.
-            2. Cross-reference the top finding with the CONTEXTUAL GUIDELINES.
-            3. VERIFY: Ensure the finding you report matches the highest percentage in the RAW DATA.
+            1. PRIMARY FINDING: Focus your report on the finding with the highest confidence: {sorted_all_findings[0][0]} ({max_prob*100:.1f}%).
+            2. GUIDELINE ADHERENCE: If 'RELEVANT_GUIDELINES' contains specific management for {sorted_all_findings[0][0]}, prioritize that information.
+            3. KNOWLEDGE FALLBACK: If the provided guidelines do not cover {sorted_all_findings[0][0]}, use your internal medical training to provide standard radiographic descriptors and general management steps. Do NOT state that the guidelines are missing or mention 'raw data'; remain professional and helpful.
+            4. TONE: Maintain a formal, consultant-level tone. Use clear, medical language.
             
             STRUCTURE YOUR RESPONSE AS FOLLOWS:
             **Radiographic Signature**: [Visual cues for {sorted_all_findings[0][0]}]
-            **Clinical Management**: [Steps based on guidelines]
-            **Patient Summary**: [Simple explanation of the {sorted_all_findings[0][0]} finding]
+            **Clinical Management**: [Expert next steps or diagnostic follow-up]
+            **Patient Summary**: [A clear, empathetic explanation of the {sorted_all_findings[0][0]} finding]
             """
             
             # 3. Call LLM
