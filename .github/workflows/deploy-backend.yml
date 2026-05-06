@@ -58,4 +58,5 @@ jobs:
             COSMOS_KEY=${{ secrets.COSMOS_KEY }}
             STORAGE_CONN_STR=${{ secrets.STORAGE_CONN_STR }}
             RAG_ENABLED=true
+            ALLOW_UNSAFE_MODEL_DESERIALIZATION=true
           flags: '--allow-unauthenticated --memory=4Gi'
