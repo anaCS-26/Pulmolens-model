@@ -396,17 +396,9 @@ async def predict(file: UploadFile = File(...)):
             """
             
             # 3. Call LLM
-            response = llm.invoke(prompt)
-            
-            # --- FIX: Handle List-style response.content from newer Gemini models ---
-            if isinstance(response.content, str):
-                clinical_report = response.content
-            elif isinstance(response.content, list):
-                # Extract text parts if Gemini returns a list of blocks
-                text_parts = [p.get('text', '') if isinstance(p, dict) else str(p) for p in response.content]
-                clinical_report = "".join(text_parts)
-            else:
-                clinical_report = str(response.content)
+            from langchain_core.output_parsers import StrOutputParser
+            chain = llm | StrOutputParser()
+            clinical_report = chain.invoke(prompt)
             
             # --- EXTRACT SOURCES for transparency ---
             cited_sources = []
@@ -431,6 +423,12 @@ async def predict(file: UploadFile = File(...)):
             f"Top confidence ({max_prob*100:.1f}%) is below the RAG threshold "
             f"({RAG_MIN_TOP_PROB*100:.1f}%), so guideline generation was skipped to reduce cost."
         )
+    else:
+        # Fallback if RAG components failed to initialize but were expected to run
+        findings_str = ", ".join([f"{k} ({v*100:.1f}%)" for k, v in results.items() if v > 0.1])
+        if not findings_str:
+            findings_str = "No significant findings."
+        clinical_report = f"Analysis complete. Custom model breakdown: {findings_str}. (Note: Detailed AI explanation is unavailable, likely due to missing Gemini/Pinecone API keys or initialization failure)."
 
     return {
         "predictions": results,

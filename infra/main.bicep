@@ -20,13 +20,3 @@ module storage 'storage.bicep' = {
     projectName: projectName
   }
 }
-
-module containerApp 'aca.bicep' = {
-  scope: rg
-  name: 'aca-deployment'
-  params: {
-    location: location
-    projectName: projectName
-    dockerImage: 'pulmolens-backend:latest'
-  }
-}

@@ -1,8 +1,14 @@
-name: Deploy Backend to Container App
+name: Deploy Backend to Google Cloud Run
 on:
   push:
     branches: [ main ]
-    paths: [ 'backend/**', 'infra/**' ]
+    paths: [ 'backend/**', '.github/workflows/deploy-backend.yml' ]
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: us-central1
+  SERVICE_NAME: pulmolens-backend
+  IMAGE_NAME: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/pulmolens-repo/pulmolens-backend
 
 jobs:
   build-and-deploy:
@@ -10,103 +16,46 @@ jobs:
     environment: production
     steps:
       - name: Checkout Source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Check required deploy secrets
-        id: deploy_secrets
+      - name: Check required secrets
+        id: check_secrets
         shell: bash
-        env:
-          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-          AZURE_ACR_NAME: ${{ secrets.AZURE_ACR_NAME }}
-          MODEL_SAS_URL: ${{ secrets.MODEL_SAS_URL }}
-          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          COSMOS_KEY: ${{ secrets.COSMOS_KEY }}
-          STORAGE_CONN_STR: ${{ secrets.STORAGE_CONN_STR }}
         run: |
-          missing=()
-          for v in AZURE_CREDENTIALS AZURE_ACR_NAME MODEL_SAS_URL PINECONE_API_KEY GOOGLE_API_KEY COSMOS_KEY STORAGE_CONN_STR; do
-            if [ -z "${!v}" ]; then
-              missing+=("$v")
-            fi
-          done
-
-          if [ "${#missing[@]}" -gt 0 ]; then
-            echo "deploy_ok=false" >> "$GITHUB_OUTPUT"
-            echo "missing=${missing[*]}" >> "$GITHUB_OUTPUT"
-          else
-            echo "deploy_ok=true" >> "$GITHUB_OUTPUT"
+          if [ -z "${{ secrets.GCP_PROJECT_ID }}" ] || [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
+            echo "Missing GCP credentials. Please configure GCP_PROJECT_ID and GCP_SA_KEY in GitHub Secrets."
+            exit 1
           fi
 
-      - name: Skip deploy when secrets are missing
-        if: steps.deploy_secrets.outputs.deploy_ok != 'true'
-        run: |
-          echo "Skipping Azure deploy because required secrets are missing:"
-          echo "${{ steps.deploy_secrets.outputs.missing }}"
-
-      - name: Azure Login
-        if: steps.deploy_secrets.outputs.deploy_ok == 'true'
-        uses: azure/login@v1
+      - name: Google Auth
+        id: auth
+        uses: google-github-actions/auth@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Build and Push Docker Image
-        if: steps.deploy_secrets.outputs.deploy_ok == 'true'
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Authorize Docker push
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev
+
+      - name: Build and Push Container
         run: |
-          az acr build --registry ${{ secrets.AZURE_ACR_NAME }} --image pulmolens-backend:${{ github.sha }} ./backend
+          docker build -t ${{ env.IMAGE_NAME }}:${{ github.sha }} ./backend
+          docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-      - name: Configure Container App ACR pull via managed identity
-        if: steps.deploy_secrets.outputs.deploy_ok == 'true'
-        shell: bash
-        env:
-          ACR_NAME: ${{ secrets.AZURE_ACR_NAME }}
-        run: |
-          ACR_ID=$(az acr show --name "$ACR_NAME" --query id -o tsv)
-          ACR_SERVER=$(az acr show --name "$ACR_NAME" --query loginServer -o tsv)
-
-          az containerapp identity assign \
-            --name pulmolens-container \
-            --resource-group PulmoLense \
-            --system-assigned
-
-          PRINCIPAL_ID=$(az containerapp show \
-            --name pulmolens-container \
-            --resource-group PulmoLense \
-            --query identity.principalId -o tsv)
-
-          EXISTING=$(az role assignment list \
-            --assignee-object-id "$PRINCIPAL_ID" \
-            --assignee-principal-type ServicePrincipal \
-            --scope "$ACR_ID" \
-            --role AcrPull \
-            --query "[0].id" -o tsv)
-
-          if [ -z "$EXISTING" ]; then
-            az role assignment create \
-              --assignee-object-id "$PRINCIPAL_ID" \
-              --assignee-principal-type ServicePrincipal \
-              --scope "$ACR_ID" \
-              --role AcrPull
-          fi
-
-          az containerapp registry set \
-            --name pulmolens-container \
-            --resource-group PulmoLense \
-            --server "$ACR_SERVER" \
-            --identity system
-
-      - name: Deploy to Azure Container App
-        if: steps.deploy_secrets.outputs.deploy_ok == 'true'
-        uses: azure/container-apps-deploy-action@v1
-        env:
-          MODEL_SAS_URL: ${{ secrets.MODEL_SAS_URL }}
-          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          COSMOS_KEY: ${{ secrets.COSMOS_KEY }}
-          STORAGE_CONN_STR: ${{ secrets.STORAGE_CONN_STR }}
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
         with:
-          acrName: ${{ secrets.AZURE_ACR_NAME }}
-          containerAppName: pulmolens-container
-          resourceGroup: PulmoLense
-          imageToDeploy: ${{ secrets.AZURE_ACR_NAME }}.azurecr.io/pulmolens-backend:${{ github.sha }}
-          yamlConfigPath: infra/aca-config.yaml
+          service: ${{ env.SERVICE_NAME }}
+          region: ${{ env.GCP_REGION }}
+          image: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          env_vars: |
+            MODEL_SAS_URL=${{ secrets.MODEL_SAS_URL }}
+            PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}
+            GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
+            COSMOS_ENDPOINT=${{ secrets.COSMOS_ENDPOINT }}
+            COSMOS_KEY=${{ secrets.COSMOS_KEY }}
+            STORAGE_CONN_STR=${{ secrets.STORAGE_CONN_STR }}
+            RAG_ENABLED=true
+          flags: '--allow-unauthenticated'
