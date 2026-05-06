@@ -93,8 +93,15 @@ try:
     vector_store = PineconeVectorStore(index_name="pulmolens-guidelines", embedding=rag_embeddings)
     
     # Updated to the new high-efficiency Gemini 2.5 Flash Lite model
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite")
-    logger.info("✅ RAG components initialized (Gemini 2.5 Flash Lite + Pinecone 3072)")
+    # Thinking Budget enables reasoning to prevent hallucinations (2026 standard)
+    # Temperature 1.0 is recommended for reasoning models to avoid logic loops
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash-lite",
+        system_instruction="You are a Senior Radiographic Consultant AI. Provide expert radiographic signatures and clinical management plans grounded in guidelines. Always verify your summary against the specific raw vision data provided.",
+        thinking_budget=1024,
+        temperature=1.0
+    )
+    logger.info("✅ RAG components initialized (Gemini 2.5 Flash Lite + Thinking Mode + Pinecone 3072)")
 except Exception as e:
     logger.error(f"❌ RAG initialization failure: {e}")
     vector_store = None
@@ -368,36 +375,41 @@ async def predict(file: UploadFile = File(...)):
             retrieved_docs = vector_store.similarity_search(search_query, k=3)
             context = "\n\n".join([doc.page_content for doc in retrieved_docs])
             
-            # --- AGENTIC GATE: Confidence Check (Deterministic Flow) ---
-            # If the top finding is below 40% (empty top_findings), we trigger the 'Uncertainty Agent'
-            if len(top_findings) == 0:
-                prompt_task = "The model did NOT detect any specific pathology with high confidence (all below 40%). Explain that the image is indeterminate/clear and provide general preventative advice for chest health."
-                guidance_tone = "Cautious, reassurance-focused."
-                vision_analysis = "No significant abnormalities detected above threshold."
-            elif max_prob < 0.5:
-                prompt_task = f"The model is UNCERTAIN (highest finding '{top_findings[0]}' is only {max_prob*100:.1f}%). Explain the indeterminate features and suggest follow-up imaging."
-                guidance_tone = "Cautious, seeking clinical correlation."
-                vision_analysis = f"Marginal detection for {', '.join(top_findings)}."
-            else:
-                prompt_task = f"The core detection is {top_findings[0]} (confidence {max_prob*100:.1f}%). Provide an expert radiographic signature and management plan based on the guidelines."
-                guidance_tone = "Authoritative, expert consultant."
-                vision_analysis = f"High confidence in {', '.join(top_findings)}."
+            # --- PREPARE DATA: Sort findings for the LLM to prioritize correctly ---
+            sorted_all_findings = sorted(results.items(), key=lambda x: x[1], reverse=True)
+            formatted_vision_data = "\n".join([f"- {k}: {v*100:.1f}%" for k, v in sorted_all_findings if v > 0.05])
 
-            # 2. Generation Prompt - Senior Expert Persona Implementation
+            # --- AGENTIC GATE: Confidence Check (Deterministic Flow) ---
+            if len(top_findings) == 0:
+                prompt_task = "Explain that no specific pathology was detected with high confidence and provide general preventative chest health advice."
+                vision_summary = "No significant abnormalities detected above threshold."
+            elif max_prob < 0.5:
+                prompt_task = f"The model is UNCERTAIN (top finding '{sorted_all_findings[0][0]}' is only {max_prob*100:.1f}%). Explain indeterminate features and suggest follow-up."
+                vision_summary = f"Marginal detection for {sorted_all_findings[0][0]}."
+            else:
+                prompt_task = f"The primary detection is {sorted_all_findings[0][0]} (confidence {max_prob*100:.1f}%). Provide expert radiographic signature and management plan."
+                vision_summary = f"High confidence in {sorted_all_findings[0][0]}."
+
+            # 2. Generation Prompt - Explicit Data Separation & Chain-of-Thought
             prompt = f"""
-            SYSTEM ROLE: You are a Senior Radiographic Consultant AI.
-            TASK: {prompt_task}
-            TONE: {guidance_tone}
+            ### RAW VISION ANALYSIS DATA (GROUND TRUTH)
+            {formatted_vision_data}
             
-            VISION ANALYSIS: {vision_analysis}
+            ### TASK
+            {prompt_task}
+            
+            ### CONTEXTUAL GUIDELINES
+            {context}
+            
+            ### INSTRUCTIONS
+            1. Use ONLY the RAW VISION ANALYSIS DATA to identify the findings.
+            2. Cross-reference the top finding with the CONTEXTUAL GUIDELINES.
+            3. VERIFY: Ensure the finding you report matches the highest percentage in the RAW DATA.
             
             STRUCTURE YOUR RESPONSE AS FOLLOWS:
-            **Radiographic Signature**: [Visual cues]
-            **Clinical Management**: [Next steps from guidelines]
-            **Patient Summary**: [Simple explanation]
-            
-            GUIDELINES:
-            {context}
+            **Radiographic Signature**: [Visual cues for {sorted_all_findings[0][0]}]
+            **Clinical Management**: [Steps based on guidelines]
+            **Patient Summary**: [Simple explanation of the {sorted_all_findings[0][0]} finding]
             """
             
             # 3. Call LLM
