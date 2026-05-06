@@ -24,6 +24,8 @@ COPY data data
 # Note: The PyTorch model weights (.pth) are NOT baked into this image.
 # Weights are pulled at runtime from Azure Blob Storage via MODEL_SAS_URL.
 
-EXPOSE 8000
+# Cloud Run provides the PORT environment variable
+ENV PORT=8080
+EXPOSE $PORT
 
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD uvicorn api:app --host 0.0.0.0 --port ${PORT}
