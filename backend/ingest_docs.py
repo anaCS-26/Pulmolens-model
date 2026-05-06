@@ -34,8 +34,11 @@ def populate_database_with_pdfs():
     print(f"   Created {len(documents)} searchable chunks.")
 
     print("3. Generating Gemini Embeddings & Uploading to Pinecone...")
-    # Generate vectors using Gemini (Dimensions: 768)
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-2-preview")
+    # Generate vectors using Gemini (Dimensions: 3072)
+    embeddings = GoogleGenerativeAIEmbeddings(
+        model="models/gemini-embedding-2-preview",
+        output_dimensionality=3072
+    )
     
     # Must match the Index Name you created on Pinecone
     index_name = "pulmolens-guidelines"

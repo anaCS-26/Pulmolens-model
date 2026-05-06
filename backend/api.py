@@ -84,13 +84,17 @@ vector_store = None
 llm = None
 
 try:
-    # Use explicit model strings for new Gemini 2.0 releases
-    rag_embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-2-preview")
+    # Use explicit model strings for new Gemini 2.5 releases
+    # 3072 is the native dimensionality for gemini-embedding-2-preview
+    rag_embeddings = GoogleGenerativeAIEmbeddings(
+        model="models/gemini-embedding-2-preview",
+        output_dimensionality=3072
+    )
     vector_store = PineconeVectorStore(index_name="pulmolens-guidelines", embedding=rag_embeddings)
     
-    # Updated to the new high-efficiency Flash Lite model identifier
-    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite-preview-02-05")
-    logger.info("✅ RAG components initialized (Gemini 2.0 Flash Lite + Pinecone)")
+    # Updated to the new high-efficiency Gemini 2.5 Flash Lite model
+    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite")
+    logger.info("✅ RAG components initialized (Gemini 2.5 Flash Lite + Pinecone 3072)")
 except Exception as e:
     logger.error(f"❌ RAG initialization failure: {e}")
     vector_store = None
@@ -422,7 +426,7 @@ async def predict(file: UploadFile = File(...)):
             cited_sources = list(dict.fromkeys(cited_sources))
             
         except Exception as e:
-            logger.error(f"RAG pipeline error: {e}")
+            logger.error(f"RAG pipeline error: {e}", exc_info=True)
             clinical_report = f"Detected {', '.join(top_findings)}. (RAG explanation temporarily unavailable)."
             cited_sources = []
     elif not RAG_ENABLED:
