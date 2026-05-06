@@ -396,9 +396,17 @@ async def predict(file: UploadFile = File(...)):
             """
             
             # 3. Call LLM
-            from langchain_core.output_parsers import StrOutputParser
-            chain = llm | StrOutputParser()
-            clinical_report = chain.invoke(prompt)
+            response = llm.invoke(prompt)
+            
+            # --- FIX: Handle List-style response.content from newer Gemini models ---
+            if isinstance(response.content, str):
+                clinical_report = response.content
+            elif isinstance(response.content, list):
+                # Extract text parts if Gemini returns a list of blocks
+                text_parts = [p.get('text', '') if isinstance(p, dict) else str(p) for p in response.content]
+                clinical_report = "".join(text_parts)
+            else:
+                clinical_report = str(response.content)
             
             # --- EXTRACT SOURCES for transparency ---
             cited_sources = []
