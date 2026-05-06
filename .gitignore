@@ -56,3 +56,6 @@ frontend/inference-api/models/*.pt
 
 # Duplicate files
 backend/dockerignore
+
+# Personal AI Instructions
+GEMINI.md
