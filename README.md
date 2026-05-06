@@ -21,18 +21,45 @@ It analyzes chest X-rays for 14 pathologies, provides visual explainability via 
 - **Explainability (Grad-CAM++)**: Instead of a "black box" prediction, the system generates visual heatmaps to show *exactly* where the model is looking on the X-ray.
 - **Optimized Recall**: Per-class probability thresholds calibrated to minimize false negatives for critical findings like Pneumonia and Pneumothorax.
 
+#### 📊 Model Performance Evaluation
+The custom AttentionDenseNet model was evaluated on a held-out test set, achieving a **Mean AUC of 0.8511**.
+
+```text
+                    precision    recall  f1-score   support
+
+       Atelectasis       0.24      0.82      0.37      1155
+      Cardiomegaly       0.17      0.66      0.27       261
+          Effusion       0.32      0.87      0.47      1369
+      Infiltration       0.24      0.91      0.38      2129
+              Mass       0.23      0.64      0.34       551
+            Nodule       0.20      0.63      0.30       684
+         Pneumonia       0.06      0.20      0.09       164
+      Pneumothorax       0.27      0.72      0.40       549
+     Consolidation       0.16      0.59      0.25       550
+             Edema       0.14      0.67      0.23       248
+         Emphysema       0.30      0.74      0.43       279
+          Fibrosis       0.10      0.40      0.17       178
+Pleural_Thickening       0.16      0.53      0.25       345
+            Hernia       0.26      0.50      0.34        32
+
+         micro avg       0.23      0.76      0.35      8494
+         macro avg       0.20      0.63      0.31      8494
+      weighted avg       0.23      0.76      0.35      8494
+       samples avg       0.18      0.36      0.22      8494
+```
+
 ### 🤖 2. RAG Pipeline & "Agentic" Logic
 - **Clinical Grounding**: Built a RAG pipeline using **LangChain**, **Google Gemini**, and **Pinecone**. It retrieves relevant sections from BTS and NICE clinical guidelines to back up every report.
 - **Uncertainty Protocol**: Implemented a logic gate where the system detects low-confidence predictions and automatically shifts its tone to a "cautious consultant," recommending further clinical correlation.
 
-### ☁️ Cloud-Native Deployment (Azure)
-- **Backend**: Containerized FastAPI (Python) on **Azure Container Apps** (Scale-to-Zero optimized).
+### ☁️ 3. Cloud-Native Deployment (Hybrid GCP/Azure)
+- **Backend**: Containerized FastAPI (Python) on **Google Cloud Run** (Scale-to-Zero optimized, dynamically allocated memory & ports).
 - **Frontend**: React (TypeScript) on **Azure Static Web Apps**.
 - **Database**: **Azure Cosmos DB** (NoSQL) for audit logging and feedback loops.
 - **Storage**: **Azure Blob Storage** for versioned model weights and clinical imaging.
 - **Optimization**: The infrastructure is set to a lean, cost-efficient state with development and training data (50k+ images) archived to minimize overhead.
 - **Model Registry Pattern**: Large model weights (~500MB) are streamed from **Azure Blob Storage** via time-limited SAS URLs during container boot, keeping Docker images lightweight and portable.
-- **Infrastructure as Code (IaC)**: Deployments are fully reproducible using **Azure Bicep** templates for storage, logs, and compute.
+- **Infrastructure as Code (IaC)**: Deployments are automated using **Azure Bicep** and **GitHub Actions**.
 
 ### 🔌 4. The Future of AI Integration (MCP)
 - **Model Context Protocol**: Native support for **MCP**, allowing Anthropic's Claude or other AI agents to use PulmoLens as a "tool" to analyze images directly via a base64 encoded string.
@@ -45,10 +72,10 @@ This diagram illustrates how an image is processed: from the initial upload to t
 
 ```mermaid
 graph TD
-    User([Clinician/User]) -->|Upload X-Ray| FE[React Frontend]
-    FE -->|POST /predict| BE[FastAPI Backend]
+    User([Clinician/User]) -->|Upload X-Ray| FE[React Frontend on Azure]
+    FE -->|POST /predict| BE[FastAPI Backend on Google Cloud Run]
     
-    subgraph "Azure Cloud Layer"
+    subgraph "Data Storage (Azure)"
         BE <--> BLOB[(Blob Storage)]
         BE --> COSMOS[(Cosmos DB)]
     end
@@ -76,7 +103,7 @@ graph TD
 - Node.js 18+
 
 ### 2. Environment Setup
-Create a `.env` in both `backend/` and `frontend/` folders using the provided `.env.example` templates. You'll need API keys for **Google Gemini**, **Pinecone**, and access to **Azure** for cloud features.
+Create a `.env` in both `backend/` and `frontend/` folders using the provided `.env.example` templates. You'll need API keys for **Google Gemini**, **Pinecone**, and access to **Azure/GCP** for cloud features.
 
 ### 3. Local Run
 ```bash
@@ -98,7 +125,7 @@ npm run dev
 - `/backend`: FastAPI service, model loading, and RAG logic.
 - `/frontend`: React + TypeScript UI with beautiful glassmorphism design.
 - `/ml`: Model architecture (PyTorch), training scripts, and evaluation utilities.
-- `/infra`: Azure Bicep templates for zero-touch infrastructure setup.
+- `/infra`: Azure Bicep templates and deployment workflows.
 
 ---
 
