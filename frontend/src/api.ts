@@ -85,13 +85,26 @@ export async function uploadAndAnalyze(file: File, retryCount = 0): Promise<Anal
   }
 }
 
-export async function summarizeAI(predictions: Record<string, number>, heatmap: string): Promise<SummarizeResp> {
+/**
+ * Stage 2: Generates the expert clinical report via streaming
+ */
+export async function summarizeAIStream(
+  predictions: Record<string, number>, 
+  heatmap: string,
+  onChunk: (text: string) => void,
+  onSources: (sources: string[]) => void
+): Promise<void> {
   if (IS_DEMO) {
-    await new Promise(resolve => setTimeout(resolve, 3500)); // Longer wait for the "thinking" loader demo
-    return {
-      report: "**Radiographic Signature**: There is a focal area of consolidation in the right lower lobe, consistent with pneumonia. No large pleural effusions or pneumothorax identified.\n\n**Clinical Management**: Initiate antibiotics as per local community-acquired pneumonia (CAP) guidelines. Consider CURB-65 score for severity assessment.\n\n**Patient Summary**: The scan shows a localized area of lung inflammation (pneumonia) in the lower right lung. This typically requires a course of antibiotics and follow-up to ensure clearance.",
-      sources: ["BTS Guidelines for CAP (2024)", "NICE Chest Infection Pathway"]
-    };
+    const demoText = "**Radiographic Signature**: There is a focal area of consolidation in the right lower lobe, consistent with pneumonia. No large pleural effusions or pneumothorax identified.\n\n**Clinical Management**: Initiate antibiotics as per local community-acquired pneumonia (CAP) guidelines. Consider CURB-65 score for severity assessment.\n\n**Patient Summary**: The scan shows a localized area of lung inflammation (pneumonia) in the lower right lung. This typically requires a course of antibiotics and follow-up to ensure clearance.";
+    
+    // Simulate streaming by yielding chunks of the text
+    const words = demoText.split(" ");
+    for (const word of words) {
+      onChunk(word + " ");
+      await new Promise(r => setTimeout(r, 40 + Math.random() * 60));
+    }
+    onSources(["BTS Guidelines for CAP (2024)", "NICE Chest Infection Pathway"]);
+    return;
   }
 
   const res = await fetch(`${API_BASE_URL}/summarize`, {
@@ -105,7 +118,31 @@ export async function summarizeAI(predictions: Record<string, number>, heatmap: 
     throw new Error(`Summarize failed: ${err}`);
   }
 
-  return (await res.json()) as SummarizeResp;
+  if (!res.body) throw new Error("Readable stream not supported");
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const data = JSON.parse(line);
+        if (data.report) onChunk(data.report);
+        if (data.sources) onSources(data.sources);
+      } catch (e) {
+        console.error("Failed to parse stream chunk", e);
+      }
+    }
+  }
 }
 
 export async function submitFeedback(file: File, rating: "good" | "bad", predictions?: Record<string, number>, details?: string) {

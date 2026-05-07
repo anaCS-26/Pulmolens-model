@@ -5,6 +5,7 @@ import cv2
 import base64
 import binascii
 from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter, Header
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
@@ -377,13 +378,12 @@ async def predict(file: UploadFile = File(...)):
 @router.post("/summarize")
 async def summarize(request: SummarizeRequest):
     """
-    Second stage of the pipeline: Generates the RAG-grounded expert report.
+    Second stage of the pipeline: Generates the RAG-grounded expert report as a stream.
     """
     if not (vector_store and llm and RAG_ENABLED):
-         return {
-            "report": "AI summarization is currently unavailable.",
-            "sources": []
-        }
+         async def err_gen():
+             yield json.dumps({"report": "AI summarization is currently unavailable."}) + "\n"
+         return StreamingResponse(err_gen(), media_type="application/x-ndjson")
 
     results = request.predictions
     heatmap_b64 = request.heatmap
@@ -394,84 +394,76 @@ async def summarize(request: SummarizeRequest):
     max_prob = sorted_all_findings[0][1] if sorted_all_findings else 0
     
     if max_prob < RAG_MIN_TOP_PROB:
-        return {
-            "report": f"Top confidence ({max_prob*100:.1f}%) is below the RAG threshold ({RAG_MIN_TOP_PROB*100:.1f}%). Detailed report skipped.",
-            "sources": []
-        }
+        async def threshold_gen():
+            yield json.dumps({"report": f"Top confidence ({max_prob*100:.1f}%) is below the RAG threshold. Detailed report skipped."}) + "\n"
+        return StreamingResponse(threshold_gen(), media_type="application/x-ndjson")
 
-    try:
-        # 1. Retrieval
-        search_query = " ".join(top_findings) if top_findings else "no findings indeterminate"
-        retrieved_docs = vector_store.similarity_search(search_query, k=3)
-        context = "\n\n".join([doc.page_content for doc in retrieved_docs])
-        
-        # Format vision data
-        formatted_vision_data = "\n".join([f"- {k}: {v*100:.1f}%" for k, v in sorted_all_findings if v > 0.05])
+    async def report_generator():
+        try:
+            # 1. Retrieval
+            search_query = " ".join(top_findings) if top_findings else "no findings indeterminate"
+            retrieved_docs = vector_store.similarity_search(search_query, k=3)
+            context = "\n\n".join([doc.page_content for doc in retrieved_docs])
+            
+            # Format vision data
+            formatted_vision_data = "\n".join([f"- {k}: {v*100:.1f}%" for k, v in sorted_all_findings if v > 0.05])
 
-        # 2. Generation Prompt
-        prompt = f"""
-        [INTERNAL DATA - DO NOT REFERENCE BY NAME IN OUTPUT]
-        FINDINGS: {formatted_vision_data}
-        RELEVANT_GUIDELINES: {context}
-        
-        ### INSTRUCTIONS for Senior Radiographic Consultant
-        You are providing a clinical interpretation of a chest X-ray. 
-        
-        1. PRIMARY FINDING: Focus your report on the finding with the highest confidence: {sorted_all_findings[0][0]} ({max_prob*100:.1f}%).
-        2. GUIDELINE ADHERENCE: If 'RELEVANT_GUIDELINES' contains specific management for {sorted_all_findings[0][0]}, prioritize that information.
-        3. VISUAL GROUNDING: Use the attached Grad-CAM heatmap to guide your signature. The heatmap highlights areas the classification model focused on. Confirm if these areas align with the expected pathology location.
-        4. KNOWLEDGE FALLBACK: If the provided guidelines do not cover {sorted_all_findings[0][0]}, use your internal medical training to provide standard radiographic descriptors and general management steps. Do NOT state that the guidelines are missing or mention 'raw data'; remain professional and helpful.
-        5. TONE: Maintain a formal, consultant-level tone. Use clear, medical language.
-        
-        STRUCTURE YOUR RESPONSE AS FOLLOWS:
-        **Radiographic Signature**: [Visual cues for {sorted_all_findings[0][0]}]
-        **Clinical Management**: [Expert next steps or diagnostic follow-up]
-        **Patient Summary**: [A clear, empathetic explanation of the {sorted_all_findings[0][0]} finding]
-        """
+            # 2. Generation Prompt
+            prompt = f"""
+            [INTERNAL DATA - DO NOT REFERENCE BY NAME IN OUTPUT]
+            FINDINGS: {formatted_vision_data}
+            RELEVANT_GUIDELINES: {context}
+            
+            ### INSTRUCTIONS for Senior Radiographic Consultant
+            You are providing a clinical interpretation of a chest X-ray. 
+            
+            1. PRIMARY FINDING: Focus your report on the finding with the highest confidence: {sorted_all_findings[0][0]} ({max_prob*100:.1f}%).
+            2. GUIDELINE ADHERENCE: If 'RELEVANT_GUIDELINES' contains specific management for {sorted_all_findings[0][0]}, prioritize that information.
+            3. VISUAL GROUNDING: Use the attached Grad-CAM heatmap to guide your signature. The heatmap highlights areas the classification model focused on. Confirm if these areas align with the expected pathology location.
+            4. KNOWLEDGE FALLBACK: If the provided guidelines do not cover {sorted_all_findings[0][0]}, use your internal medical training to provide standard radiographic descriptors and general management steps. Do NOT state that the guidelines are missing or mention 'raw data'; remain professional and helpful.
+            5. TONE: Maintain a formal, consultant-level tone. Use clear, medical language.
+            
+            STRUCTURE YOUR RESPONSE AS FOLLOWS:
+            **Radiographic Signature**: [Visual cues for {sorted_all_findings[0][0]}]
+            **Clinical Management**: [Expert next steps or diagnostic follow-up]
+            **Patient Summary**: [A clear, empathetic explanation of the {sorted_all_findings[0][0]} finding]
+            """
 
-        # 3. Call LLM
-        logger.info(f"📤 Sending multimodal request to {llm.model} with heatmap image ({len(heatmap_b64)} chars)")
-        message = HumanMessage(content=[
-            {"type": "text", "text": prompt},
-            {"type": "image_url", "image_url": {"url": heatmap_b64}}
-        ])
-        response = llm.invoke([message])
-        
-        # Handle response
-        if isinstance(response.content, str):
-            clinical_report = response.content
-        elif isinstance(response.content, list):
-            text_parts = []
-            for p in response.content:
-                if isinstance(p, dict):
-                    if p.get('thought') is True:
-                        logger.info(f"🧠 Gemma 4 Thinking: {p.get('text')}")
-                        continue
-                    text_parts.append(p.get('text', ''))
+            # 3. Stream from LLM
+            logger.info(f"📤 Starting multimodal stream for {llm.model}")
+            message = HumanMessage(content=[
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": heatmap_b64}}
+            ])
+            
+            # Use stream to yield text chunks
+            async for chunk in llm.astream([message]):
+                # Handle thinking parts if they appear in the stream (specific to newer SDKs)
+                content = chunk.content
+                if isinstance(content, list):
+                    text = "".join([p.get('text', '') for p in content if not p.get('thought')])
                 else:
-                    text_parts.append(str(p))
-            clinical_report = "".join(text_parts).strip()
-        else:
-            clinical_report = str(response.content)
-        
-        # Extract sources
-        cited_sources = []
-        for doc in retrieved_docs:
-            src_filename = os.path.basename(doc.metadata.get('source', 'Unknown'))
-            page = doc.metadata.get('page', '?')
-            cited_sources.append(f"{src_filename} (Page {page})")
-        cited_sources = list(dict.fromkeys(cited_sources))
+                    text = content
+                
+                if text:
+                    yield json.dumps({"report": text}) + "\n"
 
-        return {
-            "report": clinical_report,
-            "sources": cited_sources
-        }
+            # 4. Final step: Yield sources
+            cited_sources = []
+            for doc in retrieved_docs:
+                src_filename = os.path.basename(doc.metadata.get('source', 'Unknown'))
+                page = doc.metadata.get('page', '?')
+                cited_sources.append(f"{src_filename} (Page {page})")
+            cited_sources = list(dict.fromkeys(cited_sources))
+            
+            yield json.dumps({"sources": cited_sources}) + "\n"
 
-    except Exception as e:
-        logger.error(f"RAG pipeline error: {e}", exc_info=True)
-        return {
-            "report": f"Detected {', '.join(top_findings)}. (RAG explanation temporarily unavailable).",
-            "sources": []
+        except Exception as e:
+            logger.error(f"Streaming error: {e}", exc_info=True)
+            yield json.dumps({"report": f"\nError during generation: {str(e)}"}) + "\n"
+
+    return StreamingResponse(report_generator(), media_type="application/x-ndjson")
+": []
         }
 
 # --- MCP ENDPOINTS: Enabling Claude/Desktop tool use ---

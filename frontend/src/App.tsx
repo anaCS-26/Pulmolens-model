@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { uploadAndAnalyze, summarizeAI } from "./api";
+import { uploadAndAnalyze, summarizeAIStream } from "./api";
 import { LABELS, CLINICIAN_COPY, GUIDELINE_TAGS, THRESHOLDS } from "./data/constants";
 import { Step } from "./types";
 
@@ -102,13 +102,17 @@ export default function App() {
       // Stage 2: Trigger AI Summarization in the background
       if (predictions && heatmap) {
         setIsSummarizing(true);
+        setReport(""); // Clear previous report for streaming
+        setSources([]);
         try {
-          const { report, sources } = await summarizeAI(predictions, heatmap);
-          setReport(report);
-          setSources(sources);
+          await summarizeAIStream(
+            predictions, 
+            heatmap, 
+            (chunk) => setReport(prev => (prev || "") + chunk),
+            (sources) => setSources(sources)
+          );
         } catch (summErr) {
           console.error("Summarization background task failed:", summErr);
-          // Don't show a full error screen, just log it. The UI handles missing reports.
         } finally {
           setIsSummarizing(false);
         }

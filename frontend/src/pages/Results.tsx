@@ -28,30 +28,57 @@ interface ResultsProps {
     isSummarizing?: boolean;
 }
 
-// Minimal Markdown-lite component to handle **bold** and basic line breaks/lists
-// Improved Markdown-lite component to handle inconsistent LLM formatting
-function MarkdownLite({ text }: { text: string }) {
+// Improved component to handle character-level streaming animation
+function StreamingCharacterText({ text, isComplete }: { text: string; isComplete?: boolean }) {
+    if (!text) return null;
+    
+    // Split into words first to maintain readability during stream
+    const words = text.split(" ");
+    
+    return (
+        <span className="inline">
+            {words.map((word, wIdx) => (
+                <span key={`word-${wIdx}`} className="inline-block mr-1">
+                    {word.split("").map((char, cIdx) => (
+                        <span 
+                            key={`char-${wIdx}-${cIdx}`}
+                            className="inline-block animate-report-char"
+                            style={{ 
+                                animationFillMode: 'both'
+                            }}
+                        >
+                            {char}
+                        </span>
+                    ))}
+                </span>
+            ))}
+            {!isComplete && (
+                <span className="inline-block w-1.5 h-4 bg-indigo-500 ml-1 animate-pulse rounded-sm align-middle" />
+            )}
+        </span>
+    );
+}
+
+function MarkdownLite({ text, isStreaming }: { text: string; isStreaming?: boolean }) {
     if (!text) return null;
     const lines = text.split("\n");
     return (
         <div className="space-y-1.5">
             {lines.map((l, i) => {
                 const trimmed = l.trim();
-                // A bullet is a line starting with * but NOT ** (which is bold)
                 const isBullet = trimmed.startsWith("*") && !trimmed.startsWith("**");
                 const content = isBullet ? trimmed.slice(1).trim() : trimmed;
 
                 if (!content) return <div key={i} className="h-2" />;
 
-                // Regex that finds any combination of asterisks around a word for bolding
                 const parts = content.split(/(\*\*?.*?\*\*?)/);
                 const rendered = parts.map((p, j) => {
-                    // Match a string starting with * or ** and ending with * or **
                     if (/^\*\*?.*?\*\*?$/.test(p)) {
-                        const cleanText = p.replace(/\*/g, ""); // strip ALL asterisks for clean bold text
+                        const cleanText = p.replace(/\*/g, "");
                         return <strong key={j} className="font-bold text-slate-900">{cleanText}</strong>;
                     }
-                    return p;
+                    // For non-bold text, apply character-level animation if streaming
+                    return isStreaming ? <StreamingCharacterText key={j} text={p} isComplete={!isStreaming} /> : p;
                 });
 
                 if (isBullet) {
@@ -64,6 +91,15 @@ function MarkdownLite({ text }: { text: string }) {
                 }
                 return <div key={i} className="mb-2 last:mb-0">{rendered}</div>;
             })}
+            <style dangerouslySetInnerHTML={{ __html: `
+                @keyframes report-char-in {
+                    0% { opacity: 0; transform: translateY(8px); filter: blur(1px); }
+                    100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+                }
+                .animate-report-char {
+                    animation: report-char-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+                }
+            `}} />
         </div>
     );
 }
@@ -217,8 +253,8 @@ export function Results({
                             </div>
                         </div>
                         
-                        <div className="p-6 text-sm md:text-base text-slate-800 leading-relaxed">
-                            <MarkdownLite text={report} />
+                        <div className="p-6 text-sm md:text-base text-slate-800 leading-relaxed min-h-[100px]">
+                            <MarkdownLite text={report} isStreaming={isSummarizing} />
                         </div>
 
                         {sources && sources.length > 0 && (
