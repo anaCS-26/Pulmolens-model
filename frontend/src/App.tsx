@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { uploadAndAnalyze, summarizeAIStream } from "./api";
+import { predict, summarizeAI } from "./api";
 import { LABELS, CLINICIAN_COPY, GUIDELINE_TAGS, THRESHOLDS } from "./data/constants";
 import { Step } from "./types";
 
@@ -49,7 +49,7 @@ export default function App() {
   useEffect(() => { 
     runDevChecks(); 
     // Warmup the backend as soon as the app loads to mitigate cold starts
-    import("./api").then(({ warmup }) => warmup());
+    warmup();
   }, []);
 
   // predictions — ONLY from server
@@ -91,11 +91,11 @@ export default function App() {
     setErrorMsg(null);
     setStep("processing");
     try {
-      const { predictions, heatmap, imageId } = await uploadAndAnalyze(f);
+      const { predictions, heatmap, image_id } = await predict(f);
       
       setServerPreds(predictions || null);
       setHeatmap(heatmap || null);
-      setImageId(imageId || null);
+      setImageId(image_id || null);
       setProgress(100);
       setStep("results");
 

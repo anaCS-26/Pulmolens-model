@@ -3,9 +3,17 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 export interface PredictionResult {
     predictions: Record<string, number>;
     heatmap: string;
-    report: string;
+    report?: string;
     image_id: string;
 }
+
+export const warmup = async () => {
+    try {
+        await fetch(`${API_BASE_URL}/health`);
+    } catch (e) {
+        // ignore
+    }
+};
 
 export const predict = async (file: File): Promise<PredictionResult> => {
     const formData = new FormData();
