@@ -463,8 +463,6 @@ async def summarize(request: SummarizeRequest):
             yield json.dumps({"report": f"\nError during generation: {str(e)}"}) + "\n"
 
     return StreamingResponse(report_generator(), media_type="application/x-ndjson")
-": []
-        }
 
 # --- MCP ENDPOINTS: Enabling Claude/Desktop tool use ---
 @app.get("/mcp/tools")
