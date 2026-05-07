@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { predict, summarizeAI, warmup } from "./api";
+import { predict, summarizeAI } from "./api";
 import { LABELS, CLINICIAN_COPY, GUIDELINE_TAGS, THRESHOLDS } from "./data/constants";
 import { Step } from "./types";
 
