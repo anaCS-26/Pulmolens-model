@@ -49,8 +49,8 @@ Pleural_Thickening       0.16      0.53      0.25       345
 ```
 
 ### 🤖 2. RAG Pipeline & "Agentic" Logic
-- **Clinical Grounding**: Built a RAG pipeline using **LangChain**, **Google Gemini**, and **Pinecone**. It retrieves relevant sections from BTS and NICE clinical guidelines to back up every report.
-- **Uncertainty Protocol**: Implemented a logic gate where the system detects low-confidence predictions and automatically shifts its tone to a "cautious consultant," recommending further clinical correlation.
+- **Clinical Grounding**: Built a RAG pipeline using **LangChain**, **Google Gemini 2.5 Flash Lite**, and **Pinecone**. It retrieves relevant sections from BTS and NICE clinical guidelines to back up every report.
+- **Reasoning with Thinking Mode**: Leverages Gemini 2.5's **Thinking Budget** to perform internal cross-verification between vision findings and retrieved guidelines, minimizing hallucinations and ensuring expert-level accuracy.
 
 ### ☁️ 3. Cloud-Native Deployment (Hybrid GCP/Azure)
 - **Backend**: Containerized FastAPI (Python) on **Google Cloud Run** (Scale-to-Zero optimized, dynamically allocated memory & ports).
@@ -85,7 +85,7 @@ graph TD
         MODEL --> HEATMAP[Grad-CAM++ Heatmap]
         
         MODEL -->|"Pathology Results"| PINDEX[(Pinecone DB)]
-        PINDEX -->|"Guidelines Retrieval"| LLM[Gemini Flash Lite]
+        PINDEX -->|"Guidelines Retrieval"| LLM[Gemini 2.5 Flash Lite]
         LLM --> REPORT[Clinical Report]
     end
     
