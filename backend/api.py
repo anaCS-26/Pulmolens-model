@@ -420,13 +420,22 @@ async def predict(file: UploadFile = File(...)):
             ])
             response = llm.invoke([message])
             
-            # --- FIX: Handle List-style response.content from newer Gemini models ---
+            # --- FIX: Handle List-style response.content from newer Gemma/Gemini models ---
             if isinstance(response.content, str):
                 clinical_report = response.content
             elif isinstance(response.content, list):
-                # Extract text parts if Gemini returns a list of blocks
-                text_parts = [p.get('text', '') if isinstance(p, dict) else str(p) for p in response.content]
-                clinical_report = "".join(text_parts)
+                # Extract text parts, but EXCLUDE internal thinking blocks for the patient report
+                # Thinking blocks are logged for audit/transparency but not shown in clinical_report
+                text_parts = []
+                for p in response.content:
+                    if isinstance(p, dict):
+                        if p.get('thought') is True:
+                            logger.info(f"🧠 Gemma 4 Thinking: {p.get('text')}")
+                            continue
+                        text_parts.append(p.get('text', ''))
+                    else:
+                        text_parts.append(str(p))
+                clinical_report = "".join(text_parts).strip()
             else:
                 clinical_report = str(response.content)
             
