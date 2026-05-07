@@ -28,7 +28,37 @@ interface ResultsProps {
     isSummarizing?: boolean;
 }
 
-function MarkdownLite({ text }: { text: string }) {
+// Improved component to handle character-level streaming animation with a typewriter effect
+function StreamingCharacterText({ text, isComplete }: { text: string; isComplete?: boolean }) {
+    if (!text) return null;
+    
+    // We treat the text as a continuous sequence of characters
+    // Using index-based delay to create a typewriter effect
+    const characters = text.split("");
+    const animationSpeed = 25; // ms per character
+
+    return (
+        <span className="inline">
+            {characters.map((char, index) => (
+                <span 
+                    key={`char-${index}`}
+                    className="inline-block animate-report-char"
+                    style={{ 
+                        animationDelay: `${index * animationSpeed}ms`,
+                        animationFillMode: 'both'
+                    }}
+                >
+                    {char === " " ? "\u00A0" : char}
+                </span>
+            ))}
+            {!isComplete && (
+                <span className="inline-block w-1.5 h-4 bg-indigo-500 ml-1 animate-pulse rounded-sm align-middle" />
+            )}
+        </span>
+    );
+}
+
+function MarkdownLite({ text, isStreaming }: { text: string; isStreaming?: boolean }) {
     if (!text) return null;
     const lines = text.split("\n");
     return (
@@ -46,7 +76,8 @@ function MarkdownLite({ text }: { text: string }) {
                         const cleanText = p.replace(/\*/g, "");
                         return <strong key={j} className="font-bold text-slate-900">{cleanText}</strong>;
                     }
-                    return p;
+                    // For non-bold text, apply character-level animation if streaming
+                    return isStreaming ? <StreamingCharacterText key={j} text={p} isComplete={!isStreaming} /> : p;
                 });
 
                 if (isBullet) {
@@ -59,6 +90,15 @@ function MarkdownLite({ text }: { text: string }) {
                 }
                 return <div key={i} className="mb-2 last:mb-0">{rendered}</div>;
             })}
+            <style dangerouslySetInnerHTML={{ __html: `
+                @keyframes report-char-in {
+                    0% { opacity: 0; transform: translateY(8px); filter: blur(1px); }
+                    100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+                }
+                .animate-report-char {
+                    animation: report-char-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+                }
+            `}} />
         </div>
     );
 }
@@ -213,7 +253,7 @@ export function Results({
                         </div>
                         
                         <div className="p-6 text-sm md:text-base text-slate-800 leading-relaxed min-h-[100px]">
-                            <MarkdownLite text={report} />
+                            <MarkdownLite text={report} isStreaming={isSummarizing} />
                         </div>
 
                         {sources && sources.length > 0 && (
