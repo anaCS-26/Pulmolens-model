@@ -79,12 +79,23 @@ export const ThinkingLoader: React.FC = () => {
         />
       </svg>
 
-      <h3
-        key={verbIndex}
-        className="text-sm font-medium text-slate-800 tracking-tight leading-none"
-      >
-        <CharacterAnimator text={MEDICAL_VERBS[verbIndex]} />
-      </h3>
+      <div className="flex flex-col gap-0.5 leading-none">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-indigo-600">
+            AI
+          </span>
+          <span className="text-sm font-medium text-slate-800 tracking-tight">
+            Generating analysis
+          </span>
+        </div>
+        <h3
+          key={verbIndex}
+          className="text-[11px] font-normal text-slate-500 tracking-tight"
+          aria-live="polite"
+        >
+          <CharacterAnimator text={MEDICAL_VERBS[verbIndex]} />
+        </h3>
+      </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes ekg-sweep {

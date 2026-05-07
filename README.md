@@ -10,7 +10,8 @@ It analyzes chest X-rays for 14 pathologies, provides visual explainability via 
 ---
 
 ## 📸 Project Showcase
-*(Include screenshots of the Upload, Processing, and Results screens here)*
+
+Try it live: [https://victorious-sky-0836ce10f.3.azurestaticapps.net](https://victorious-sky-0836ce10f.3.azurestaticapps.net) — upload a chest X-ray and run a real prediction end-to-end.
 
 ---
 
@@ -87,26 +88,37 @@ This diagram illustrates how an image is processed: from the initial upload to t
 
 ```mermaid
 graph TD
-    User([Clinician/User]) -->|Upload X-Ray| FE[React Frontend on Azure]
-    FE -->|POST /predict| BE[FastAPI Backend on Google Cloud Run]
-    
-    subgraph "Data Storage (Azure)"
-        BE <--> BLOB[(Blob Storage)]
-        BE --> COSMOS[(Cosmos DB)]
+    User([Clinician/User]) -->|Upload X-Ray| FE["React Frontend<br/>(Azure Static Web Apps)"]
+    FE -->|"POST /predict"| BE["FastAPI Backend<br/>(Google Cloud Run)"]
+    FE -->|"POST /summarize"| BE
+
+    subgraph AZURE ["Data Storage (Azure)"]
+        BLOB[("Blob Storage<br/>weights + uploads")]
+        COSMOS[("Cosmos DB<br/>feedback / audit")]
     end
-    
-    subgraph "AI Analysis Pipeline"
-        BE --> MODEL[AttentionDenseNet]
-        MODEL --> HEATMAP[Grad-CAM++ Heatmap]
-        
-        MODEL -->|"Pathology Results"| PINDEX[(Pinecone DB)]
-        PINDEX -->|"Guidelines Retrieval"| LLM[Gemma 4 31B Dense]
-        LLM --> REPORT[Clinical Report]
+
+    BE <-->|"SAS URL load"| BLOB
+    BE -->|"feedback writes"| COSMOS
+
+    subgraph VISION ["Vision Pipeline (/predict)"]
+        MODEL["AttentionDenseNet<br/>DenseNet121 + CBAM"]
+        OVERLAY["Grad-CAM++<br/>attention_overlay"]
+        MODEL --> OVERLAY
     end
-    
-    REPORT --> BE
-    HEATMAP --> BE
-    BE -->|Combined Result| FE
+
+    subgraph RAG ["RAG Pipeline (/summarize)"]
+        QEXPAND["Clinical query<br/>expansion + filter"]
+        PINDEX[("Pinecone<br/>BTS / NICE / AHA / Fleischner")]
+        LLM["Gemma 4 (31B Dense)<br/>via LangChain"]
+        QEXPAND --> PINDEX
+        PINDEX -->|"retrieved guidelines"| LLM
+    end
+
+    BE --> MODEL
+    OVERLAY -->|"predictions + overlay"| BE
+    BE -->|"top findings + overlay"| QEXPAND
+    LLM -->|"streamed report + sources"| BE
+    BE -->|"JSON / NDJSON stream"| FE
 ```
 
 ---
