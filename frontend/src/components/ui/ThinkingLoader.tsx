@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Activity } from 'lucide-react';
 
 const MEDICAL_VERBS = [
   "Auscultating",
@@ -11,66 +12,55 @@ const MEDICAL_VERBS = [
   "Examining",
   "Scanning",
   "Probing",
-  "Radiating",
-  "Grounding",
   "Consulting",
-  "Developing",
-  "Fixating",
   "Analyzing",
   "Localizing",
   "Differentiating"
 ];
 
-const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-
 export const ThinkingLoader: React.FC = () => {
   const [verbIndex, setVerbIndex] = useState(0);
-  const [spinnerIndex, setSpinnerIndex] = useState(0);
 
   useEffect(() => {
-    // Cycle the spinner very fast (mimic terminal refresh)
-    const spinnerInterval = setInterval(() => {
-      setSpinnerIndex((prev) => (prev + 1) % SPINNER_FRAMES.length);
-    }, 80);
-
-    // Cycle verbs every 1.5 seconds
+    // Cycle verbs every 2 seconds for a calmer pace
     const verbInterval = setInterval(() => {
       setVerbIndex((prev) => (prev + 1) % MEDICAL_VERBS.length);
-    }, 1500);
+    }, 2000);
 
-    return () => {
-      clearInterval(spinnerInterval);
-      clearInterval(verbInterval);
-    };
+    return () => clearInterval(verbInterval);
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-6 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl animate-in fade-in duration-700">
-      <div className="flex items-center space-x-4 mb-4">
-        <span className="text-4xl font-mono text-cyan-400 min-w-[1.5rem] text-center">
-          {SPINNER_FRAMES[spinnerIndex]}
-        </span>
-        <h3 className="text-2xl font-semibold bg-gradient-to-r from-white via-cyan-100 to-white/70 bg-clip-text text-transparent">
-          {MEDICAL_VERBS[verbIndex]}...
-        </h3>
+    <div className="flex items-center gap-4 py-6 px-6 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm animate-in fade-in duration-500">
+      <div className="relative flex items-center justify-center">
+        <Activity className="h-6 w-6 text-indigo-600 animate-pulse-fast" />
+        {/* Subtle outer glow that pulses */}
+        <div className="absolute inset-0 bg-indigo-400/20 rounded-full blur-md animate-ping-slow" />
       </div>
       
-      <p className="text-cyan-200/60 font-mono text-sm tracking-widest uppercase">
-        Gemma 4 Reasoning in Progress
-      </p>
-
-      {/* Decorative pulse line */}
-      <div className="mt-8 w-48 h-1 bg-white/5 rounded-full overflow-hidden relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400 to-transparent w-24 animate-shimmer" />
+      <div className="flex flex-col">
+        <h3 className="text-base font-medium text-slate-900">
+          {MEDICAL_VERBS[verbIndex]}...
+        </h3>
+        <p className="text-xs text-slate-500 font-medium">
+          Generating clinical summary
+        </p>
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(200%); }
+        @keyframes pulse-fast {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.15); opacity: 0.8; }
         }
-        .animate-shimmer {
-          animation: shimmer 2s infinite ease-in-out;
+        @keyframes ping-slow {
+          0% { transform: scale(1); opacity: 0.4; }
+          100% { transform: scale(1.6); opacity: 0; }
+        }
+        .animate-pulse-fast {
+          animation: pulse-fast 0.8s infinite ease-in-out;
+        }
+        .animate-ping-slow {
+          animation: ping-slow 2s infinite cubic-bezier(0, 0, 0.2, 1);
         }
       `}} />
     </div>
