@@ -8,7 +8,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter, Header
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
+from typing import Optional
 from datetime import datetime
 from PIL import Image
 import uvicorn
@@ -16,6 +16,8 @@ import os
 import uuid
 import json
 import requests
+from pydantic import BaseModel
+from typing import List, Dict, Any
 from dotenv import load_dotenv
 
 # --- INITIALIZATION: Load environment before any cloud clients ---
@@ -102,7 +104,7 @@ try:
         thinking_level="high",
         temperature=1.0
     )
-    logger.info("✅ RAG components initialized (Gemma 4 31B + Thinking Mode + Pinecone 3072)")
+    logger.info("✅ RAG components initialized (Gemini 2.5 Flash Lite + Thinking Mode + Pinecone 3072)")
 except Exception as e:
     logger.error(f"❌ RAG initialization failure: {e}")
     vector_store = None
@@ -311,6 +313,11 @@ async def warmup():
 async def predict(file: UploadFile = File(...)):
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
+    
+    # Initialize response variables to avoid UnboundLocalError
+    clinical_report = "Analysis complete."
+    cited_sources = []
+    
     contents = await file.read()
     _read_and_validate_upload(contents, file.content_type)
     input_tensor, img_float, image = preprocess_image(contents)
@@ -365,7 +372,7 @@ async def predict(file: UploadFile = File(...)):
         "predictions": results,
         "heatmap": heatmap_b64,
         "version": API_VERSION,
-        "image_id": blob_url or file.filename,
+        "imageId": blob_url or file.filename,
     }
 
 @router.post("/summarize")
@@ -469,12 +476,15 @@ async def mcp_analyze(request: dict, x_api_key: Optional[str] = Header(default=N
             return {"error": "Invalid base64 image payload"}
 
         _read_and_validate_upload(img_bytes, "image/jpeg")
+        from fastapi import UploadFile
+        import io
         mock_file = UploadFile(filename="mcp_input.jpg", file=io.BytesIO(img_bytes))
         
         result = await predict(mock_file)
         high_conf = [name for name, prob in result["predictions"].items() if prob > 0.5]
         return {
             "content": [
+                {"type": "text", "text": f"PulmoLens Analysis Result: {result['report']}"},
                 {"type": "text", "text": f"Findings summary: {', '.join(high_conf) if high_conf else 'No high-confidence findings'}"}
             ]
         }
