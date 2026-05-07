@@ -73,12 +73,17 @@ function useTypewriter(target: string, baseCps = 70): string {
 // Render `text` as individually-animated <span>s keyed by absolute offset
 // `start`. React reuses spans across re-renders for offsets that haven't
 // changed, so each char animates exactly once on first mount.
-function AnimatedChars({ text, start, bold }: { text: string; start: number; bold?: boolean }) {
+function AnimatedChars({ text, start, bold, tailStart }: { text: string; start: number; bold?: boolean; tailStart: number }) {
     const Wrap = bold ? 'strong' : 'span';
+    const wrapClass = bold ? "font-semibold text-slate-900" : undefined;
+    const splitAt = Math.max(0, Math.min(text.length, tailStart - start));
+    const settled = text.slice(0, splitAt);
+    const tail = text.slice(splitAt);
     return (
-        <Wrap className={bold ? "font-semibold text-slate-900" : undefined}>
-            {Array.from(text).map((ch, k) => (
-                <span key={start + k} className="char-fade-up">
+        <Wrap className={wrapClass}>
+            {settled}
+            {Array.from(tail).map((ch, k) => (
+                <span key={start + splitAt + k} className="char-fade-up">
                     {ch === ' ' ? ' ' : ch}
                 </span>
             ))}
@@ -89,6 +94,12 @@ function AnimatedChars({ text, start, bold }: { text: string; start: number; bol
 function MarkdownLite({ text, isStreaming }: { text: string; isStreaming?: boolean }) {
     const displayed = useTypewriter(text || "");
     const stillTyping = !!isStreaming || displayed.length < (text?.length || 0);
+    // Only the last ANIMATED_TAIL chars get per-char animation while streaming;
+    // older chars collapse back to plain text so we don't accumulate thousands
+    // of inline-block spans (each carrying a finished filter/transform animation)
+    // that would otherwise stall scroll-time compositing.
+    const ANIMATED_TAIL = 80;
+    const tailStart = stillTyping ? Math.max(0, displayed.length - ANIMATED_TAIL) : displayed.length;
 
     if (!displayed) return null;
     const lines = displayed.split("\n");
@@ -128,6 +139,7 @@ function MarkdownLite({ text, isStreaming }: { text: string; isStreaming?: boole
                             text={inner}
                             start={cursor + (isBold ? 2 : 0)}
                             bold={isBold}
+                            tailStart={tailStart}
                         />
                     );
                     cursor += p.length;
