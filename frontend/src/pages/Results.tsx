@@ -105,7 +105,7 @@ function MarkdownLite({ text, isStreaming }: { text: string; isStreaming?: boole
     const lines = displayed.split("\n");
 
     // Track the running absolute character offset so each <span> key is
-    // stable across re-renders — already-mounted chars don't re-animate.
+    // stable across re-renders so already-mounted chars don't re-animate.
     let offset = 0;
 
     return (
@@ -269,7 +269,7 @@ export function Results({
                                 <Maximize2 className="h-5 w-5" />
                             </button>
                         </div>
-                        <div className="mt-3 text-xs text-slate-500">Overlay slot for Grad‑CAM/attention maps.</div>
+                        <div className="mt-3 text-xs text-slate-500">Overlay reserved for Grad-CAM and attention maps.</div>
                     </div>
 
                     <div className="md:col-span-2">
@@ -280,7 +280,7 @@ export function Results({
                         )}
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                             <div className="flex items-center gap-2 text-sm"><Search className="h-4 w-4" /> Filter</div>
-                            <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search findings…" className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" />
+                            <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search findings..." className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm" />
                         </div>
 
                         <div className="mt-4 space-y-2 max-h-[22rem] overflow-auto pr-1">

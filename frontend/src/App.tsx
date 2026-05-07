@@ -52,7 +52,7 @@ export default function App() {
     import("./api").then(({ warmup }) => warmup());
   }, []);
 
-  // predictions — ONLY from server
+  // predictions: ONLY from server
   const predictions = useMemo(() => {
     if (!serverPreds) return [] as { label: string; prob: number }[];
     return Object.entries(serverPreds)

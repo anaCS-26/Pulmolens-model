@@ -38,7 +38,7 @@ export function Header({ step, setStep, agreed, hasFile }: HeaderProps) {
                     <div>
                         <div className="text-xl font-semibold tracking-tight">PulmoLens</div>
                         <div className="text-xs text-slate-500">
-                            AI-assisted CXR Guidance {import.meta.env.VITE_DEMO_MODE === 'true' ? "(Mock Mode)" : "(Demo)"}
+                            AI-assisted chest X-ray guidance {import.meta.env.VITE_DEMO_MODE === 'true' ? "(mock mode)" : "(demo)"}
                         </div>
                     </div>
                 </div>

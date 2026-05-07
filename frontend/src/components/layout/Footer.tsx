@@ -5,7 +5,7 @@ export function Footer() {
         <footer className="mt-12 text-center text-xs text-slate-500 border-t border-slate-200 bg-white">
             <div className="mx-auto max-w-6xl px-4 py-8">
                 <div className="font-medium text-slate-700 flex items-center justify-center gap-2">
-                    © {new Date().getFullYear()} PulmoLens — Portfolio Prototype.
+                    © {new Date().getFullYear()} PulmoLens · Portfolio prototype.
                     {import.meta.env.VITE_DEMO_MODE === 'true' && (
                         <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">Demo Mode Active</span>
                     )}

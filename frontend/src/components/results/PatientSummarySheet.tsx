@@ -10,7 +10,7 @@ function toLayTerm(label: string): string {
         Nodule: "small spot that needs checking",
         Pneumonia: "lung infection",
         Pneumothorax: "air leak (collapsed lung)",
-        Consolidation: "solid‑looking lung area (often infection)",
+        Consolidation: "solid-looking lung area (often infection)",
         Edema: "fluid in the lungs",
         Emphysema: "damaged air sacs (COPD)",
         Fibrosis: "scarring of the lungs",
@@ -39,14 +39,14 @@ export function PatientSummarySheet({ findings, onClose }: PatientSummarySheetPr
                 </div>
 
                 <div className="prose max-w-none text-sm text-zinc-800">
-                    <p><strong>What this means:</strong> Your chest X‑ray suggests the findings listed below. This summary helps understanding and does not replace medical advice.</p>
+                    <p><strong>What this means:</strong> your chest X-ray suggests the findings listed below. This summary is to aid understanding and does not replace medical advice.</p>
                     <ul className="mt-3">
                         {findings.map((f) => (
                             <li key={f.label}><strong>{toLayTerm(f.label)}:</strong> please follow the plan agreed with your clinician.</li>
                         ))}
                     </ul>
                     <h4 className="mt-4">What should happen next?</h4>
-                    <p>Depending on symptoms and history, your clinician may arrange blood tests, repeat X‑rays or other scans, or treatment.</p>
+                    <p>Depending on your symptoms and history, your clinician may arrange blood tests, a repeat X-ray, additional scans, or treatment.</p>
                     <h4 className="mt-4">Get urgent help if you develop:</h4>
                     <ul>
                         <li>Severe breathlessness or chest pain</li>
@@ -54,7 +54,7 @@ export function PatientSummarySheet({ findings, onClose }: PatientSummarySheetPr
                         <li>Coughing up blood</li>
                         <li>Rapidly worsening symptoms</li>
                     </ul>
-                    <p className="mt-4 text-xs text-zinc-500">Disclaimer: Decision support only. Not a diagnosis. Imaging must be interpreted in clinical context.</p>
+                    <p className="mt-4 text-xs text-zinc-500">Disclaimer: decision support only. Not a diagnosis. Imaging must always be interpreted in clinical context.</p>
                 </div>
             </div>
         </div>

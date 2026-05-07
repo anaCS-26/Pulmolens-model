@@ -14,11 +14,11 @@ export function Landing({ onStart, onLearnMore }: LandingProps) {
                     <Brain className="h-3.5 w-3.5" /> Demo prototype
                 </div>
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight mt-4">
-                    PulmoLens — clinician-first chest X-ray guidance
+                    Clinician-first chest X-ray guidance
                 </h1>
                 <p className="text-slate-600 mt-3 text-base leading-relaxed">
-                    Upload a de-identified CXR and preview structured, UK-guideline-aligned next steps.
-                    Educational demo only — not for diagnosis or patient care.
+                    Upload a de-identified chest X-ray to see structured, UK-guideline-aligned next steps in seconds.
+                    This is an educational demo. It is not intended for diagnosis or patient care.
                 </p>
                 <div className="mt-6 flex items-center gap-3">
                     <button
@@ -35,9 +35,9 @@ export function Landing({ onStart, onLearnMore }: LandingProps) {
                     </button>
                 </div>
                 <ul className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-600">
-                    <li className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" />UK-centric guidance</li>
-                    <li className="flex items-center gap-2"><FileText className="h-4 w-4" />Shareable report</li>
-                    <li className="flex items-center gap-2"><ImageIcon className="h-4 w-4" />Heatmap overlay slot</li>
+                    <li className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" />Aligned with UK guidance</li>
+                    <li className="flex items-center gap-2"><FileText className="h-4 w-4" />Shareable structured report</li>
+                    <li className="flex items-center gap-2"><ImageIcon className="h-4 w-4" />Grad-CAM heatmap overlay</li>
                     <li className="flex items-center gap-2"><Stethoscope className="h-4 w-4" />Built for clinicians</li>
                 </ul>
             </div>
@@ -51,7 +51,7 @@ export function Landing({ onStart, onLearnMore }: LandingProps) {
                         <ImageIcon className="relative h-10 w-10 text-white/80" />
                     </div>
                     <p className="mt-3 text-sm text-white/80">
-                        The prototype shows server predictions only. If the backend fails, you’ll see an error banner — no placeholders.
+                        The prototype only displays live model output. If the backend is unavailable, you will see an error message rather than mock results.
                     </p>
                 </div>
             </div>

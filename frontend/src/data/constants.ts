@@ -31,7 +31,7 @@ export const GUIDELINE_TAGS: Record<string, string[]> = {
     Fibrosis: ["NICE Idiopathic Pulmonary Fibrosis"],
     Pleural_Thickening: ["BTS Pleural Disease"],
     Hernia: ["WSES/EAST Diaphragmatic Hernia", "NHS CDH leaflet (context)"],
-    "No findings": ["—"],
+    "No findings": ["None"],
 };
 
 export const CLINICIAN_COPY: Record<string, string> = {

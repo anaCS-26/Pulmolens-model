@@ -14,8 +14,8 @@ export function UploadPanel({ onFile, onBack }: UploadPanelProps) {
     return (
         <section className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 p-6 rounded-3xl bg-white shadow-sm border border-slate-200">
-                <h2 className="text-2xl font-semibold tracking-tight">Upload a CXR image</h2>
-                <p className="text-slate-600 mt-2 text-sm">Accepted: JPG, JPEG, PNG.</p>
+                <h2 className="text-2xl font-semibold tracking-tight">Upload a chest X-ray</h2>
+                <p className="text-slate-600 mt-2 text-sm">Accepted formats: JPG, JPEG, PNG.</p>
 
                 <div
                     onDragOver={(e) => { e.preventDefault(); setHover(true); }}
@@ -28,7 +28,7 @@ export function UploadPanel({ onFile, onBack }: UploadPanelProps) {
                 >
                     <div className="text-center">
                         <Upload className="mx-auto h-10 w-10 text-slate-400" />
-                        <div className="mt-2 font-medium">Drag & drop your image</div>
+                        <div className="mt-2 font-medium">Drag and drop your image</div>
                         <div className="text-sm text-slate-500">or</div>
                         <button onClick={() => inputRef.current?.click()} className="mt-2 inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-2">
                             Browse files
@@ -47,7 +47,7 @@ export function UploadPanel({ onFile, onBack }: UploadPanelProps) {
             <div className="space-y-6">
                 <div className="p-6 rounded-3xl bg-white shadow-sm border border-slate-200">
                     <h3 className="font-semibold">Try an example</h3>
-                    <p className="text-sm text-slate-600 mt-1">New here? Click an image to test the model instantly.</p>
+                    <p className="text-sm text-slate-600 mt-1">New here? Click an image below to run the model instantly.</p>
                     <div className="mt-4 grid grid-cols-2 gap-3">
                         {[1, 2].map((i) => (
                             <button
@@ -74,9 +74,9 @@ export function UploadPanel({ onFile, onBack }: UploadPanelProps) {
                 <div className="p-6 rounded-3xl bg-white shadow-sm border border-slate-200">
                     <h3 className="font-semibold">What happens next?</h3>
                     <ol className="mt-2 list-decimal list-inside text-sm text-slate-600 space-y-1">
-                        <li>Your image is uploaded to the backend.</li>
-                        <li>The server runs your model and returns probabilities.</li>
-                        <li>We show ONLY those predictions. If the server fails, you’ll see an error banner.</li>
+                        <li>Your image is sent to the backend.</li>
+                        <li>The server runs the model and returns pathology probabilities.</li>
+                        <li>Only the model output is displayed. If the server is unavailable, you will see an error message.</li>
                     </ol>
                 </div>
             </div>

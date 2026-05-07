@@ -1,11 +1,13 @@
 export type Predictions = Record<string, number>;
 export interface AnalyzeResp {
   predictions: Record<string, number>;
-  heatmap: string;
+  // Base64 image of the X-ray with Grad-CAM heat regions baked on top.
+  // This is a single composite, not a standalone heatmap.
+  attentionOverlay: string;
   imageId: string;
   version?: string;
   report?: string; // Kept for legacy compatibility
-  sources?: string[]; 
+  sources?: string[];
 }
 
 export interface SummarizeResp {
@@ -45,7 +47,7 @@ export async function uploadAndAnalyze(file: File, retryCount = 0): Promise<Anal
         "Atelectasis": 0.05
       },
       report: "**Radiographic Signature**: There is a focal area of consolidation in the right lower lobe, consistent with pneumonia. No large pleural effusions or pneumothorax identified.\n\n**Clinical Management**: Initiate antibiotics as per local community-acquired pneumonia (CAP) guidelines. Consider CURB-65 score for severity assessment.\n\n**Patient Summary**: The scan shows a localized area of lung inflammation (pneumonia) in the lower right lung. This typically requires a course of antibiotics and follow-up to ensure clearance.",
-      heatmap: "", // Empty string means UI will show fallback gradient or no heatmap
+      attentionOverlay: "", // Empty string means UI will show fallback gradient or no overlay
       imageId: "demo_mode_id",
       sources: ["BTS Guidelines for CAP", "NICE Chest Infection Pathway"]
     };
@@ -74,7 +76,12 @@ export async function uploadAndAnalyze(file: File, retryCount = 0): Promise<Anal
       }
       throw new Error(`Analyze failed: ${res.status} ${errText}`);
     }
-    return (await res.json()) as AnalyzeResp;
+    // Backend returns snake_case `attention_overlay`; normalise to camelCase.
+    const raw = (await res.json()) as AnalyzeResp & { attention_overlay?: string };
+    return {
+      ...raw,
+      attentionOverlay: raw.attentionOverlay ?? raw.attention_overlay ?? "",
+    };
   } catch (e: any) {
     if (retryCount < MAX_RETRIES && !e.message?.includes("400")) {
        console.warn(`Network error or timeout. Retrying ${retryCount + 1}...`, e);
@@ -89,8 +96,8 @@ export async function uploadAndAnalyze(file: File, retryCount = 0): Promise<Anal
  * Stage 2: Generates the expert clinical report via streaming
  */
 export async function summarizeAIStream(
-  predictions: Record<string, number>, 
-  heatmap: string,
+  predictions: Record<string, number>,
+  attentionOverlay: string,
   onChunk: (text: string) => void,
   onSources: (sources: string[]) => void
 ): Promise<void> {
@@ -110,7 +117,7 @@ export async function summarizeAIStream(
   const res = await fetch(`${API_BASE_URL}/summarize`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ predictions, heatmap })
+    body: JSON.stringify({ predictions, attention_overlay: attentionOverlay })
   });
 
   if (!res.ok) {
