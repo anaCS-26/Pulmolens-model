@@ -1,4 +1,5 @@
 import "./index.css";
+import "./telemetry"; // Azure Application Insights — must load before app renders
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
