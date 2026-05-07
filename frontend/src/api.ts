@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export interface PredictionResult {
@@ -13,13 +11,16 @@ export const predict = async (file: File): Promise<PredictionResult> => {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await axios.post(`${API_BASE_URL}/predict`, formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data',
-        },
+    const response = await fetch(`${API_BASE_URL}/predict`, {
+        method: 'POST',
+        body: formData,
     });
 
-    return response.data;
+    if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
+    }
+
+    return response.json();
 };
 
 export interface SummarizeResponse {
@@ -31,12 +32,22 @@ export const summarizeAI = async (
     predictions: Record<string, number>,
     heatmapB64: string
 ): Promise<SummarizeResponse> => {
-    const response = await axios.post(`${API_BASE_URL}/summarize`, {
-        predictions,
-        heatmap: heatmapB64,
+    const response = await fetch(`${API_BASE_URL}/summarize`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            predictions,
+            heatmap: heatmapB64,
+        }),
     });
 
-    return response.data;
+    if (!response.ok) {
+        throw new Error(`Summarize failed: ${response.statusText}`);
+    }
+
+    return response.json();
 };
 
 export const submitFeedback = async (
@@ -51,11 +62,14 @@ export const submitFeedback = async (
     if (details) formData.append('details', details);
     if (predictions) formData.append('predictions', JSON.stringify(predictions));
 
-    const response = await axios.post(`${API_BASE_URL}/feedback`, formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data',
-        },
+    const response = await fetch(`${API_BASE_URL}/feedback`, {
+        method: 'POST',
+        body: formData,
     });
 
-    return response.data;
+    if (!response.ok) {
+        throw new Error(`Feedback submission failed: ${response.statusText}`);
+    }
+
+    return response.json();
 };
