@@ -43,66 +43,51 @@ export const ThinkingLoader: React.FC = () => {
   useEffect(() => {
     const verbInterval = setInterval(() => {
       setVerbIndex((prev) => (prev + 1) % MEDICAL_VERBS.length);
-    }, 3000); // Slightly longer for the fade-in to be appreciated
+    }, 2800);
 
     return () => clearInterval(verbInterval);
   }, []);
 
   return (
-    <div className="flex items-center gap-6 py-5 px-8 bg-white/60 backdrop-blur-xl rounded-2xl border border-slate-200 shadow-lg animate-in fade-in duration-700 max-w-sm mx-auto ring-1 ring-slate-900/5">
-      <div className="relative flex items-center justify-center shrink-0">
-        {/* Heartbeat Shimmer Glow */}
-        <div className="relative h-8 w-8">
-           {/* Static Base Icon */}
-           <Activity className="absolute inset-0 h-8 w-8 text-slate-200" />
-           
-           {/* Glowing Animated Icon Overlay */}
-           <div className="absolute inset-0 h-8 w-8 overflow-hidden pointer-events-none">
-              <div className="h-full w-[200%] flex animate-glow-sweep">
-                 <div className="w-1/2 flex items-center justify-center">
-                    <Activity className="h-8 w-8 text-indigo-500 filter drop-shadow-[0_0_8px_rgba(99,102,241,0.6)]" />
-                 </div>
-                 <div className="w-1/2" />
-              </div>
-           </div>
-        </div>
+    <div className="flex items-center gap-4 py-3 px-5 bg-white/70 backdrop-blur-xl rounded-xl border border-slate-200 shadow-md max-w-[280px] mx-auto animate-in fade-in duration-500">
+      <div className="relative flex items-center justify-center shrink-0 w-8 h-8">
+        {/* Base muted icon */}
+        <Activity className="h-6 w-6 text-slate-200" />
         
-        {/* Subtle background pulse */}
-        <div className="absolute inset-0 bg-indigo-500/10 rounded-full blur-2xl animate-pulse" />
+        {/* Animated scanning line overlay */}
+        <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none">
+          <div className="relative h-6 w-6">
+            <Activity className="h-6 w-6 text-indigo-600" />
+            {/* The scanning "glow line" */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/80 to-transparent w-full animate-scan-line skew-x-12 mix-blend-overlay" />
+          </div>
+        </div>
       </div>
       
       <div className="flex flex-col min-w-0">
-        <h3 className="text-lg font-bold text-slate-900 leading-tight">
+        <h3 className="text-sm font-bold text-slate-900 leading-none flex items-center">
           <CharacterAnimator text={MEDICAL_VERBS[verbIndex]} />
-          <span className="text-indigo-500 inline-block animate-pulse ml-0.5">...</span>
+          <span className="text-indigo-500 ml-0.5 animate-pulse">...</span>
         </h3>
-        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">
-          Synthesizing Report
+        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">
+          Synthesizing Analysis
         </p>
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes char-fade-in {
-          0% { 
-            opacity: 0; 
-            transform: translateY(16px); 
-            filter: blur(4px);
-          }
-          100% { 
-            opacity: 1; 
-            transform: translateY(0); 
-            filter: blur(0);
-          }
+          0% { opacity: 0; transform: translateY(10px); filter: blur(2px); }
+          100% { opacity: 1; transform: translateY(0); filter: blur(0); }
         }
-        @keyframes glow-sweep {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(50%); }
+        @keyframes scan-line {
+          0% { transform: translateX(-150%); }
+          100% { transform: translateX(150%); }
         }
         .animate-char-fade-in {
-          animation: char-fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+          animation: char-fade-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
-        .animate-glow-sweep {
-          animation: glow-sweep 2.5s infinite linear;
+        .animate-scan-line {
+          animation: scan-line 2s infinite ease-in-out;
         }
       `}} />
     </div>

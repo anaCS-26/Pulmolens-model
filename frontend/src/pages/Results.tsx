@@ -28,28 +28,27 @@ interface ResultsProps {
     isSummarizing?: boolean;
 }
 
-// Improved component to handle character-level streaming animation
+// Improved component to handle character-level streaming animation with a typewriter effect
 function StreamingCharacterText({ text, isComplete }: { text: string; isComplete?: boolean }) {
     if (!text) return null;
     
-    // Split into words first to maintain readability during stream
-    const words = text.split(" ");
-    
+    // We treat the text as a continuous sequence of characters
+    // Using index-based delay to create a typewriter effect
+    const characters = text.split("");
+    const animationSpeed = 25; // ms per character
+
     return (
         <span className="inline">
-            {words.map((word, wIdx) => (
-                <span key={`word-${wIdx}`} className="inline-block mr-1">
-                    {word.split("").map((char, cIdx) => (
-                        <span 
-                            key={`char-${wIdx}-${cIdx}`}
-                            className="inline-block animate-report-char"
-                            style={{ 
-                                animationFillMode: 'both'
-                            }}
-                        >
-                            {char}
-                        </span>
-                    ))}
+            {characters.map((char, index) => (
+                <span 
+                    key={`char-${index}`}
+                    className="inline-block animate-report-char"
+                    style={{ 
+                        animationDelay: `${index * animationSpeed}ms`,
+                        animationFillMode: 'both'
+                    }}
+                >
+                    {char === " " ? "\u00A0" : char}
                 </span>
             ))}
             {!isComplete && (
