@@ -104,7 +104,7 @@ try:
         thinking_level="high",
         temperature=1.0
     )
-    logger.info("✅ RAG components initialized (Gemma 4 31B + Thinking Mode + Pinecone 3072)")
+    logger.info("✅ RAG components initialized (Gemini 2.5 Flash Lite + Thinking Mode + Pinecone 3072)")
 except Exception as e:
     logger.error(f"❌ RAG initialization failure: {e}")
     vector_store = None
@@ -372,7 +372,7 @@ async def predict(file: UploadFile = File(...)):
         "predictions": results,
         "heatmap": heatmap_b64,
         "version": API_VERSION,
-        "image_id": blob_url or file.filename,
+        "imageId": blob_url or file.filename,
     }
 
 @router.post("/summarize")
