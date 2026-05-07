@@ -6,6 +6,7 @@ import { THRESHOLDS } from "../data/constants";
 import { ResultRow } from "../components/results/ResultRow";
 import { ReportPanel } from "../components/results/ReportPanel";
 import { PatientSummarySheet } from "../components/results/PatientSummarySheet";
+import { ThinkingLoader } from "../components/ui/ThinkingLoader";
 
 interface ResultsProps {
     file: File | null;
@@ -24,6 +25,7 @@ interface ResultsProps {
     imageId: string | null;
     report: string | null;
     sources: string[];
+    isSummarizing?: boolean;
 }
 
 // Minimal Markdown-lite component to handle **bold** and basic line breaks/lists
@@ -83,6 +85,7 @@ export function Results({
     imageId,
     report,
     sources,
+    isSummarizing,
 }: ResultsProps) {
     const title = file ? file.name : "demo_cxr.jpg";
     const above = actionable.filter((a) => a.label !== "No findings");
@@ -196,7 +199,13 @@ export function Results({
                 </div>
 
                 {/* AI RAG REPORT AREA - PLACED BELOW GRADCAM AS REQUESTED */}
-                {typeof report === 'string' && report.length > 0 && (
+                {isSummarizing && (
+                    <div className="mt-8">
+                        <ThinkingLoader />
+                    </div>
+                )}
+
+                {typeof report === 'string' && report.length > 0 && !isSummarizing && (
                     <div className="mt-8 rounded-2xl bg-gradient-to-br from-indigo-50/50 to-blue-50/50 border border-indigo-100/20 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500 shadow-sm">
                         <div className="bg-white/40 backdrop-blur-sm px-5 py-3 border-b border-indigo-100/20 flex items-center justify-between">
                             <div className="flex items-center gap-2">

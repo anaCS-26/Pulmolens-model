@@ -15,6 +15,8 @@ import os
 import uuid
 import json
 import requests
+from pydantic import BaseModel
+from typing import List, Dict, Any
 from dotenv import load_dotenv
 
 # --- INITIALIZATION: Load environment before any cloud clients ---
@@ -122,6 +124,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- SCHEMAS ---
+class SummarizeRequest(BaseModel):
+    predictions: Dict[str, float]
+    heatmap: str  # base64 string
 
 router = APIRouter()
 
@@ -360,123 +367,112 @@ async def predict(file: UploadFile = File(...)):
     # Images are only stored if user submits feedback
     blob_url = None 
     
-    # --- RAG PIPELINE: GENERATE REPORT ---
-    # Trigger RAG even for low confidence but adjust the logic
-    top_findings = [cls_name for cls_name, prob in results.items() if prob > 0.4]
-    
-    # We still want RAG/LLM to explain if results are low confidence
-    sorted_probs = sorted(probs, reverse=True)
-    max_prob = sorted_probs[0] if len(sorted_probs) > 0 else 0
-
-    if vector_store and llm and RAG_ENABLED and max_prob >= RAG_MIN_TOP_PROB:
-        try:
-            # 1. Retrieval
-            search_query = " ".join(top_findings) if top_findings else "no findings indeterminate"
-            retrieved_docs = vector_store.similarity_search(search_query, k=3)
-            context = "\n\n".join([doc.page_content for doc in retrieved_docs])
-            
-            # --- PREPARE DATA: Sort findings for the LLM to prioritize correctly ---
-            sorted_all_findings = sorted(results.items(), key=lambda x: x[1], reverse=True)
-            formatted_vision_data = "\n".join([f"- {k}: {v*100:.1f}%" for k, v in sorted_all_findings if v > 0.05])
-
-            # --- AGENTIC GATE: Confidence Check (Deterministic Flow) ---
-            if len(top_findings) == 0:
-                prompt_task = "Explain that no specific pathology was detected with high confidence and provide general preventative chest health advice."
-                vision_summary = "No significant abnormalities detected above threshold."
-            elif max_prob < 0.5:
-                prompt_task = f"The model is UNCERTAIN (top finding '{sorted_all_findings[0][0]}' is only {max_prob*100:.1f}%). Explain indeterminate features and suggest follow-up."
-                vision_summary = f"Marginal detection for {sorted_all_findings[0][0]}."
-            else:
-                prompt_task = f"The primary detection is {sorted_all_findings[0][0]} (confidence {max_prob*100:.1f}%). Provide expert radiographic signature and management plan."
-                vision_summary = f"High confidence in {sorted_all_findings[0][0]}."
-
-            # 2. Generation Prompt - Professional Persona & Internal Knowledge Fallback
-            prompt = f"""
-            [INTERNAL DATA - DO NOT REFERENCE BY NAME IN OUTPUT]
-            FINDINGS: {formatted_vision_data}
-            RELEVANT_GUIDELINES: {context}
-            
-            ### INSTRUCTIONS for Senior Radiographic Consultant
-            You are providing a clinical interpretation of a chest X-ray. 
-            
-            1. PRIMARY FINDING: Focus your report on the finding with the highest confidence: {sorted_all_findings[0][0]} ({max_prob*100:.1f}%).
-            2. GUIDELINE ADHERENCE: If 'RELEVANT_GUIDELINES' contains specific management for {sorted_all_findings[0][0]}, prioritize that information.
-            3. VISUAL GROUNDING: Use the attached Grad-CAM heatmap to guide your signature. The heatmap highlights areas the classification model focused on. Confirm if these areas align with the expected pathology location.
-            4. KNOWLEDGE FALLBACK: If the provided guidelines do not cover {sorted_all_findings[0][0]}, use your internal medical training to provide standard radiographic descriptors and general management steps. Do NOT state that the guidelines are missing or mention 'raw data'; remain professional and helpful.
-            5. TONE: Maintain a formal, consultant-level tone. Use clear, medical language.
-            
-            STRUCTURE YOUR RESPONSE AS FOLLOWS:
-            **Radiographic Signature**: [Visual cues for {sorted_all_findings[0][0]}]
-            **Clinical Management**: [Expert next steps or diagnostic follow-up]
-            **Patient Summary**: [A clear, empathetic explanation of the {sorted_all_findings[0][0]} finding]
-            """
-
-            # 3. Call LLM with Multimodal Input (Phase 2 Enabled)
-            # We pass the prompt and the combined overlaid heatmap image
-            logger.info(f"📤 Sending multimodal request to {llm.model} with heatmap image ({len(heatmap_b64)} chars)")
-            message = HumanMessage(content=[
-                {"type": "text", "text": prompt},
-                {"type": "image_url", "image_url": {"url": heatmap_b64}}
-            ])
-            response = llm.invoke([message])
-            
-            # --- FIX: Handle List-style response.content from newer Gemma/Gemini models ---
-            if isinstance(response.content, str):
-                clinical_report = response.content
-            elif isinstance(response.content, list):
-                # Extract text parts, but EXCLUDE internal thinking blocks for the patient report
-                # Thinking blocks are logged for audit/transparency but not shown in clinical_report
-                text_parts = []
-                for p in response.content:
-                    if isinstance(p, dict):
-                        if p.get('thought') is True:
-                            logger.info(f"🧠 Gemma 4 Thinking: {p.get('text')}")
-                            continue
-                        text_parts.append(p.get('text', ''))
-                    else:
-                        text_parts.append(str(p))
-                clinical_report = "".join(text_parts).strip()
-            else:
-                clinical_report = str(response.content)
-            
-            # --- EXTRACT SOURCES for transparency ---
-            cited_sources = []
-            for doc in retrieved_docs:
-                src = doc.metadata.get('source', 'Unknown')
-                page = doc.metadata.get('page', '?')
-                # Clean up path to just filename
-                src_filename = os.path.basename(src)
-                cited_sources.append(f"{src_filename} (Page {page})")
-            
-            # Remove duplicates while preserving order
-            cited_sources = list(dict.fromkeys(cited_sources))
-            
-        except Exception as e:
-            logger.error(f"RAG pipeline error: {e}", exc_info=True)
-            clinical_report = f"Detected {', '.join(top_findings)}. (RAG explanation temporarily unavailable)."
-            cited_sources = []
-    elif not RAG_ENABLED:
-        clinical_report = "RAG explanation is disabled for this deployment."
-    elif max_prob < RAG_MIN_TOP_PROB:
-        clinical_report = (
-            f"Top confidence ({max_prob*100:.1f}%) is below the RAG threshold "
-            f"({RAG_MIN_TOP_PROB*100:.1f}%), so guideline generation was skipped to reduce cost."
-        )
-    else:
-        # Fallback if RAG components failed to initialize but were expected to run
-        findings_str = ", ".join([f"{k} ({v*100:.1f}%)" for k, v in results.items() if v > 0.1])
-        if not findings_str:
-            findings_str = "No significant findings."
-        clinical_report = f"Analysis complete. Custom model breakdown: {findings_str}. (Note: Detailed AI explanation is unavailable, likely due to missing Gemini/Pinecone API keys or initialization failure)."
-
     return {
         "predictions": results,
         "heatmap": heatmap_b64,
         "version": API_VERSION,
         "imageId": blob_url or file.filename,
-        "report": clinical_report,
-        "sources": cited_sources
     }
+
+@router.post("/summarize")
+async def summarize(request: SummarizeRequest):
+    """
+    Second stage of the pipeline: Generates the RAG-grounded expert report.
+    """
+    if not (vector_store and llm and RAG_ENABLED):
+         return {
+            "report": "AI summarization is currently unavailable.",
+            "sources": []
+        }
+
+    results = request.predictions
+    heatmap_b64 = request.heatmap
+    
+    # Trigger RAG logic
+    top_findings = [cls_name for cls_name, prob in results.items() if prob > 0.4]
+    sorted_all_findings = sorted(results.items(), key=lambda x: x[1], reverse=True)
+    max_prob = sorted_all_findings[0][1] if sorted_all_findings else 0
+    
+    if max_prob < RAG_MIN_TOP_PROB:
+        return {
+            "report": f"Top confidence ({max_prob*100:.1f}%) is below the RAG threshold ({RAG_MIN_TOP_PROB*100:.1f}%). Detailed report skipped.",
+            "sources": []
+        }
+
+    try:
+        # 1. Retrieval
+        search_query = " ".join(top_findings) if top_findings else "no findings indeterminate"
+        retrieved_docs = vector_store.similarity_search(search_query, k=3)
+        context = "\n\n".join([doc.page_content for doc in retrieved_docs])
+        
+        # Format vision data
+        formatted_vision_data = "\n".join([f"- {k}: {v*100:.1f}%" for k, v in sorted_all_findings if v > 0.05])
+
+        # 2. Generation Prompt
+        prompt = f"""
+        [INTERNAL DATA - DO NOT REFERENCE BY NAME IN OUTPUT]
+        FINDINGS: {formatted_vision_data}
+        RELEVANT_GUIDELINES: {context}
+        
+        ### INSTRUCTIONS for Senior Radiographic Consultant
+        You are providing a clinical interpretation of a chest X-ray. 
+        
+        1. PRIMARY FINDING: Focus your report on the finding with the highest confidence: {sorted_all_findings[0][0]} ({max_prob*100:.1f}%).
+        2. GUIDELINE ADHERENCE: If 'RELEVANT_GUIDELINES' contains specific management for {sorted_all_findings[0][0]}, prioritize that information.
+        3. VISUAL GROUNDING: Use the attached Grad-CAM heatmap to guide your signature. The heatmap highlights areas the classification model focused on. Confirm if these areas align with the expected pathology location.
+        4. KNOWLEDGE FALLBACK: If the provided guidelines do not cover {sorted_all_findings[0][0]}, use your internal medical training to provide standard radiographic descriptors and general management steps. Do NOT state that the guidelines are missing or mention 'raw data'; remain professional and helpful.
+        5. TONE: Maintain a formal, consultant-level tone. Use clear, medical language.
+        
+        STRUCTURE YOUR RESPONSE AS FOLLOWS:
+        **Radiographic Signature**: [Visual cues for {sorted_all_findings[0][0]}]
+        **Clinical Management**: [Expert next steps or diagnostic follow-up]
+        **Patient Summary**: [A clear, empathetic explanation of the {sorted_all_findings[0][0]} finding]
+        """
+
+        # 3. Call LLM
+        logger.info(f"📤 Sending multimodal request to {llm.model} with heatmap image ({len(heatmap_b64)} chars)")
+        message = HumanMessage(content=[
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": heatmap_b64}}
+        ])
+        response = llm.invoke([message])
+        
+        # Handle response
+        if isinstance(response.content, str):
+            clinical_report = response.content
+        elif isinstance(response.content, list):
+            text_parts = []
+            for p in response.content:
+                if isinstance(p, dict):
+                    if p.get('thought') is True:
+                        logger.info(f"🧠 Gemma 4 Thinking: {p.get('text')}")
+                        continue
+                    text_parts.append(p.get('text', ''))
+                else:
+                    text_parts.append(str(p))
+            clinical_report = "".join(text_parts).strip()
+        else:
+            clinical_report = str(response.content)
+        
+        # Extract sources
+        cited_sources = []
+        for doc in retrieved_docs:
+            src_filename = os.path.basename(doc.metadata.get('source', 'Unknown'))
+            page = doc.metadata.get('page', '?')
+            cited_sources.append(f"{src_filename} (Page {page})")
+        cited_sources = list(dict.fromkeys(cited_sources))
+
+        return {
+            "report": clinical_report,
+            "sources": cited_sources
+        }
+
+    except Exception as e:
+        logger.error(f"RAG pipeline error: {e}", exc_info=True)
+        return {
+            "report": f"Detected {', '.join(top_findings)}. (RAG explanation temporarily unavailable).",
+            "sources": []
+        }
 
 # --- MCP ENDPOINTS: Enabling Claude/Desktop tool use ---
 @app.get("/mcp/tools")

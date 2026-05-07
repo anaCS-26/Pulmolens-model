@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { uploadAndAnalyze } from "./api";
+import { uploadAndAnalyze, summarizeAI } from "./api";
 import { LABELS, CLINICIAN_COPY, GUIDELINE_TAGS, THRESHOLDS } from "./data/constants";
 import { Step } from "./types";
 
@@ -43,6 +43,7 @@ export default function App() {
 
   // server inference state
   const [serverPreds, setServerPreds] = useState<Record<string, number> | null>(null);
+  const [isSummarizing, setIsSummarizing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => { 
@@ -90,14 +91,28 @@ export default function App() {
     setErrorMsg(null);
     setStep("processing");
     try {
-      const { predictions, heatmap, imageId, report, sources } = await uploadAndAnalyze(f);
+      const { predictions, heatmap, imageId } = await uploadAndAnalyze(f);
+      
       setServerPreds(predictions || null);
       setHeatmap(heatmap || null);
       setImageId(imageId || null);
-      setReport(report || null);
-      setSources(sources || []);
       setProgress(100);
       setStep("results");
+
+      // Stage 2: Trigger AI Summarization in the background
+      if (predictions && heatmap) {
+        setIsSummarizing(true);
+        try {
+          const { report, sources } = await summarizeAI(predictions, heatmap);
+          setReport(report);
+          setSources(sources);
+        } catch (summErr) {
+          console.error("Summarization background task failed:", summErr);
+          // Don't show a full error screen, just log it. The UI handles missing reports.
+        } finally {
+          setIsSummarizing(false);
+        }
+      }
     } catch (e: any) {
       console.error(e);
       setErrorMsg(`Upload failed: ${e?.message || e}`);
@@ -153,6 +168,7 @@ export default function App() {
               imageId={imageId}
               report={report}
               sources={sources}
+              isSummarizing={isSummarizing}
             />
           </ErrorBoundary>
         )}

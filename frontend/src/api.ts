@@ -1,11 +1,16 @@
 export type Predictions = Record<string, number>;
 export interface AnalyzeResp {
-  inferenceId?: string; // kept for compatibility if needed
-  predictions?: Record<string, number>;
-  heatmap?: string;
-  imageId?: string;
-  report?: string; // Caught from RAG backend!
-  sources?: string[]; // Metadata citations
+  predictions: Record<string, number>;
+  heatmap: string;
+  imageId: string;
+  version?: string;
+  report?: string; // Kept for legacy compatibility
+  sources?: string[]; 
+}
+
+export interface SummarizeResp {
+  report: string;
+  sources: string[];
 }
 
 const API_BASE_URL =
@@ -78,6 +83,29 @@ export async function uploadAndAnalyze(file: File, retryCount = 0): Promise<Anal
     }
     throw e;
   }
+}
+
+export async function summarizeAI(predictions: Record<string, number>, heatmap: string): Promise<SummarizeResp> {
+  if (IS_DEMO) {
+    await new Promise(resolve => setTimeout(resolve, 3500)); // Longer wait for the "thinking" loader demo
+    return {
+      report: "**Radiographic Signature**: There is a focal area of consolidation in the right lower lobe, consistent with pneumonia. No large pleural effusions or pneumothorax identified.\n\n**Clinical Management**: Initiate antibiotics as per local community-acquired pneumonia (CAP) guidelines. Consider CURB-65 score for severity assessment.\n\n**Patient Summary**: The scan shows a localized area of lung inflammation (pneumonia) in the lower right lung. This typically requires a course of antibiotics and follow-up to ensure clearance.",
+      sources: ["BTS Guidelines for CAP (2024)", "NICE Chest Infection Pathway"]
+    };
+  }
+
+  const res = await fetch(`${API_BASE_URL}/summarize`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ predictions, heatmap })
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Summarize failed: ${err}`);
+  }
+
+  return (await res.json()) as SummarizeResp;
 }
 
 export async function submitFeedback(file: File, rating: "good" | "bad", predictions?: Record<string, number>, details?: string) {
