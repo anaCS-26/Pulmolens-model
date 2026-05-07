@@ -7,7 +7,7 @@ PulmoLens is an AI-assisted radiographic diagnostic pipeline that analyzes chest
 - **Frontend**: React (TypeScript), Vite, Tailwind CSS. Deployed on **Azure Static Web Apps**.
 - **Backend**: FastAPI (Python), Uvicorn. Deployed on **Google Cloud Run**.
 - **Deep Learning**: PyTorch (Custom AttentionDenseNet), Grad-CAM++ for explainability.
-- **RAG & Agents**: LangChain, Gemma 4 (31B Dense), Pinecone (Vector Store).
+- **RAG & Agents**: LangChain, Gemma 4 31B Dense (Instruction Tuned), Pinecone (Vector Store).
 - **Persistence & Storage**: Azure Blob Storage (Models/Images), Azure Cosmos DB (Feedback/Audit).
 - **Infrastructure**: Azure Bicep, Docker, GitHub Actions CI/CD.
 
@@ -88,16 +88,7 @@ PulmoLens is an AI-assisted radiographic diagnostic pipeline that analyzes chest
 - **Styling**: Uses Tailwind CSS with a Glassmorphism design system.
 - **Vite Configuration**: Do not hardcode the API base URL in `vite.config.ts`; keep it dynamic via environment variables.
 
+### CI/CD
+- **GitHub Workflows**:
+  - `deploy-backend.yml`: Builds and pushes Docker image to GCP Artifact Registry, then deploys to Cloud Run.
   - `azure-static-web-apps-*.yml`: Deploys the frontend to Azure.
-
----
-
-## Best Coding Practices
-
-### Branching and Workflow
-- **No Direct Commits to Main**: Always create a new branch for changes, fixes, or features.
-- **Naming Convention**: Use descriptive branch names (e.g., `feat/gemma-integration`, `fix/ui-overlap`).
-- **Testing**: Test changes in the development environment or via Azure Static Web App preview environments before merging.
-- **Merging**: Once a task is complete and verified, merge the branch into `main` via a Pull Request or git merge.
-- **Cleanup**: Delete the temporary branch immediately after merging to keep the repository clean.
-

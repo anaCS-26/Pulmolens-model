@@ -49,8 +49,8 @@ Pleural_Thickening       0.16      0.53      0.25       345
 ```
 
 ### 🤖 2. RAG Pipeline & "Agentic" Logic
-- **Clinical Grounding**: Built a RAG pipeline using **LangChain**, **Gemma 4**, and **Pinecone**. It retrieves relevant sections from BTS and NICE clinical guidelines to back up every report.
-- **Reasoning with Agentic Logic**: Leverages Gemma 4's native **Agentic Reasoning** and function calling to perform internal cross-verification between vision findings and retrieved guidelines, minimizing hallucinations and ensuring expert-level clinical accuracy.
+- **Clinical Grounding**: Built a RAG pipeline using **LangChain**, **Google Gemma 4 (31B Dense)**, and **Pinecone**. It retrieves relevant sections from BTS and NICE clinical guidelines to back up every report.
+- **Reasoning with Thinking Mode**: Leverages Gemma 4's **built-in reasoning mode** to perform internal cross-verification between vision findings and retrieved guidelines, minimizing hallucinations and ensuring expert-level accuracy.
 
 ### ☁️ 3. Cloud-Native Deployment (Hybrid GCP/Azure)
 - **Backend**: Containerized FastAPI (Python) on **Google Cloud Run** (Scale-to-Zero optimized, dynamically allocated memory & ports).
@@ -85,7 +85,7 @@ graph TD
         MODEL --> HEATMAP[Grad-CAM++ Heatmap]
         
         MODEL -->|"Pathology Results"| PINDEX[(Pinecone DB)]
-        PINDEX -->|"Guidelines Retrieval"| LLM[Gemma 4]
+        PINDEX -->|"Guidelines Retrieval"| LLM[Gemma 4 31B Dense]
         LLM --> REPORT[Clinical Report]
     end
     
@@ -103,7 +103,7 @@ graph TD
 - Node.js 18+
 
 ### 2. Environment Setup
-Create a `.env` in both `backend/` and `frontend/` folders using the provided `.env.example` templates. You'll need API keys for **Google Gemini**, **Pinecone**, and access to **Azure/GCP** for cloud features.
+Create a `.env` in both `backend/` and `frontend/` folders using the provided `.env.example` templates. You'll need API keys for **Gemma 4 (Google AI)**, **Pinecone**, and access to **Azure/GCP** for cloud features.
 
 ### 3. Local Run
 ```bash

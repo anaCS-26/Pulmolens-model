@@ -104,7 +104,7 @@ try:
         thinking_level="high",
         temperature=1.0
     )
-    logger.info("✅ RAG components initialized (Gemini 2.5 Flash Lite + Thinking Mode + Pinecone 3072)")
+    logger.info("✅ RAG components initialized (Gemma 4 31B Dense + Reasoning Mode + Pinecone 3072)")
 except Exception as e:
     logger.error(f"❌ RAG initialization failure: {e}")
     vector_store = None
@@ -113,7 +113,6 @@ except Exception as e:
 # Add CORS middleware
 origins = [
     "https://victorious-sky-0836ce10f.3.azurestaticapps.net",
-    "https://white-hill-07a66b90f.3.azurestaticapps.net",
     "https://ashy-field-00930a60f.azurestaticapps.net",
     "http://localhost:5173",
     "http://127.0.0.1:5173"
