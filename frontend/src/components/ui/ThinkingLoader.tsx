@@ -2,20 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { Activity } from 'lucide-react';
 
 const MEDICAL_VERBS = [
-  "Auscultating",
-  "Palpating",
-  "Stabilizing",
-  "Triaging",
-  "Diagnosing",
-  "Correlating",
-  "Synthesizing",
-  "Examining",
-  "Scanning",
-  "Probing",
-  "Consulting",
-  "Analyzing",
-  "Localizing",
-  "Differentiating"
+  "Auscultating...",
+  "Palpating...",
+  "Stabilizing...",
+  "Triaging...",
+  "Diagnosing...",
+  "Correlating...",
+  "Synthesizing...",
+  "Examining...",
+  "Scanning...",
+  "Probing...",
+  "Consulting...",
+  "Analyzing...",
+  "Localizing...",
+  "Differentiating..."
 ];
 
 const CharacterAnimator: React.FC<{ text: string }> = ({ text }) => {
@@ -49,45 +49,62 @@ export const ThinkingLoader: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex items-center gap-4 py-3 px-5 bg-white/70 backdrop-blur-xl rounded-xl border border-slate-200 shadow-md max-w-[280px] mx-auto animate-in fade-in duration-500">
-      <div className="relative flex items-center justify-center shrink-0 w-8 h-8">
-        {/* Base muted icon */}
-        <Activity className="h-6 w-6 text-slate-200" />
+    <div className="flex items-center gap-5 py-4 px-6 bg-white/80 backdrop-blur-2xl rounded-2xl border border-slate-200 shadow-xl max-w-[320px] mx-auto animate-in fade-in zoom-in-95 duration-500 ring-1 ring-slate-900/5">
+      <div className="relative shrink-0 w-10 h-10 flex items-center justify-center">
+        {/* The "Inactive" Muted Base Line */}
+        <Activity className="absolute h-8 w-8 text-slate-200/60" strokeWidth={2.5} />
         
-        {/* Animated scanning line overlay */}
-        <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none">
-          <div className="relative h-6 w-6">
-            <Activity className="h-6 w-6 text-indigo-600" />
-            {/* The scanning "glow line" */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/80 to-transparent w-full animate-scan-line skew-x-12 mix-blend-overlay" />
+        {/* The "Active" Purple Scanning Pulse Line */}
+        <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+          <div 
+            className="absolute h-8 w-8 text-indigo-600 animate-ekg-sweep"
+            style={{ 
+                maskImage: 'linear-gradient(to right, transparent 0%, black 50%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 50%, transparent 100%)',
+                maskSize: '200% 100%',
+                WebkitMaskSize: '200% 100%',
+            }}
+          >
+            <Activity className="h-8 w-8" strokeWidth={3} />
           </div>
+        </div>
+        
+        {/* Subtle glow dot that follows the sweep (optional for polish) */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="h-full w-2 bg-indigo-400/40 blur-md animate-ekg-glow" />
         </div>
       </div>
       
-      <div className="flex flex-col min-w-0">
-        <h3 className="text-sm font-bold text-slate-900 leading-none flex items-center">
+      <div className="flex flex-col min-w-0 py-1">
+        <h3 className="text-xl font-bold text-slate-900 leading-none h-7 flex items-center">
           <CharacterAnimator text={MEDICAL_VERBS[verbIndex]} />
-          <span className="text-indigo-500 ml-0.5 animate-pulse">...</span>
         </h3>
-        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">
+        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1.5 opacity-80">
           Synthesizing Analysis
         </p>
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes char-fade-in {
-          0% { opacity: 0; transform: translateY(10px); filter: blur(2px); }
+          0% { opacity: 0; transform: translateY(12px); filter: blur(2px); }
           100% { opacity: 1; transform: translateY(0); filter: blur(0); }
         }
-        @keyframes scan-line {
-          0% { transform: translateX(-150%); }
-          100% { transform: translateX(150%); }
+        @keyframes ekg-sweep {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        @keyframes ekg-glow {
+            0% { transform: translateX(-200%); }
+            100% { transform: translateX(400%); }
         }
         .animate-char-fade-in {
-          animation: char-fade-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+          animation: char-fade-in 0.7s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .animate-scan-line {
-          animation: scan-line 2s infinite ease-in-out;
+        .animate-ekg-sweep {
+          animation: ekg-sweep 2s infinite linear;
+        }
+        .animate-ekg-glow {
+            animation: ekg-glow 2s infinite linear;
         }
       `}} />
     </div>

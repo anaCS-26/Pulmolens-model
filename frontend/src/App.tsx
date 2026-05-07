@@ -100,22 +100,20 @@ export default function App() {
       setStep("results");
 
       // Stage 2: Trigger AI Summarization in the background
-      if (predictions && heatmap) {
+      const generateReport = async (preds: Record<string, number>, heatmapB64: string) => {
         setIsSummarizing(true);
-        setReport(""); // Clear previous report for streaming
-        setSources([]);
         try {
-          await summarizeAIStream(
-            predictions, 
-            heatmap, 
-            (chunk) => setReport(prev => (prev || "") + chunk),
-            (sources) => setSources(sources)
-          );
-        } catch (summErr) {
-          console.error("Summarization background task failed:", summErr);
+            const data = await summarizeAI(preds, heatmapB64);
+            setReport(data.report);
+            setSources(data.sources);
+        } catch (err) {
+            console.error("Report generation failed:", err);
         } finally {
-          setIsSummarizing(false);
+            setIsSummarizing(false);
         }
+      };
+      if (predictions && heatmap) {
+        generateReport(predictions, heatmap);
       }
     } catch (e: any) {
       console.error(e);
