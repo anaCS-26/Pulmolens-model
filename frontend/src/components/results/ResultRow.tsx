@@ -15,7 +15,7 @@ export function ResultRow({ p, threshold }: ResultRowProps) {
                 <span className="font-medium">{p.label}</span>
                 <span className="text-xs text-slate-500">{(p.prob * 100).toFixed(0)}%</span>
             </div>
-            <div className={cn("text-xs", over ? "text-emerald-700" : "text-slate-400")}>{over ? `above threshold (${(threshold * 100).toFixed(0)}%)` : `below threshold (${(threshold * 100).toFixed(0)}%)`}</div>
+            <div className={cn("text-xs", over ? "text-emerald-700" : "text-slate-400")}>{over ? "above threshold" : "below threshold"}</div>
         </div>
     );
 }
