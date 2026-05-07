@@ -4,7 +4,7 @@
     "action": { "type": "Delete" },
     "condition": {
       "tagState": "UNTAGGED",
-      "olderThan": "86400s"
+      "olderThan": "3600s"
     }
   },
   {
