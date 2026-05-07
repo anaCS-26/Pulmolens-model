@@ -401,8 +401,9 @@ async def predict(file: UploadFile = File(...)):
             
             1. PRIMARY FINDING: Focus your report on the finding with the highest confidence: {sorted_all_findings[0][0]} ({max_prob*100:.1f}%).
             2. GUIDELINE ADHERENCE: If 'RELEVANT_GUIDELINES' contains specific management for {sorted_all_findings[0][0]}, prioritize that information.
-            3. KNOWLEDGE FALLBACK: If the provided guidelines do not cover {sorted_all_findings[0][0]}, use your internal medical training to provide standard radiographic descriptors and general management steps. Do NOT state that the guidelines are missing or mention 'raw data'; remain professional and helpful.
-            4. TONE: Maintain a formal, consultant-level tone. Use clear, medical language.
+            3. VISUAL GROUNDING: Use the attached Grad-CAM heatmap to guide your signature. The heatmap highlights areas the classification model focused on. Confirm if these areas align with the expected pathology location.
+            4. KNOWLEDGE FALLBACK: If the provided guidelines do not cover {sorted_all_findings[0][0]}, use your internal medical training to provide standard radiographic descriptors and general management steps. Do NOT state that the guidelines are missing or mention 'raw data'; remain professional and helpful.
+            5. TONE: Maintain a formal, consultant-level tone. Use clear, medical language.
             
             STRUCTURE YOUR RESPONSE AS FOLLOWS:
             **Radiographic Signature**: [Visual cues for {sorted_all_findings[0][0]}]
@@ -412,6 +413,7 @@ async def predict(file: UploadFile = File(...)):
 
             # 3. Call LLM with Multimodal Input (Phase 2 Enabled)
             # We pass the prompt and the combined overlaid heatmap image
+            logger.info(f"📤 Sending multimodal request to {llm.model} with heatmap image ({len(heatmap_b64)} chars)")
             message = HumanMessage(content=[
                 {"type": "text", "text": prompt},
                 {"type": "image_url", "image_url": {"url": heatmap_b64}}
