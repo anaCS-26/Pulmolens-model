@@ -37,7 +37,7 @@ import logging
 logger = logging.getLogger("pulmolens")
 logging.basicConfig(level=logging.INFO)
 
-API_VERSION = "1.0.0"
+API_VERSION = "1.0.0" # Sync: Gemma 4 + Reasoning Mode Stable Baseline
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
 Image.MAX_IMAGE_PIXELS = int(os.getenv("MAX_IMAGE_PIXELS", "40000000"))
 RAG_ENABLED = os.getenv("RAG_ENABLED", "true").strip().lower() == "true"
