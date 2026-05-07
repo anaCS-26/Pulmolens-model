@@ -21,7 +21,7 @@ interface ResultsProps {
     showPatientSheet: boolean;
     setShowPatientSheet: (v: boolean) => void;
     errorMsg: string | null;
-    heatmap: string | null;
+    attentionOverlay: string | null;
     imageId: string | null;
     report: string | null;
     sources: string[];
@@ -177,7 +177,7 @@ export function Results({
     showPatientSheet,
     setShowPatientSheet,
     errorMsg,
-    heatmap,
+    attentionOverlay,
     imageId,
     report,
     sources,
@@ -249,8 +249,8 @@ export function Results({
                                 </div>
                             )}
                             {heatmapOpacity > 0 && (
-                                heatmap ? (
-                                    <img src={heatmap} alt="Grad-CAM Heatmap" className="absolute inset-0 h-full w-full object-contain transition-opacity duration-200" style={{ opacity: heatmapOpacity }} />
+                                attentionOverlay ? (
+                                    <img src={attentionOverlay} alt="Grad-CAM Attention Overlay" className="absolute inset-0 h-full w-full object-contain transition-opacity duration-200" style={{ opacity: heatmapOpacity }} />
                                 ) : (
                                     <div
                                         className="absolute inset-0 pointer-events-none mix-blend-screen transition-opacity duration-200"
@@ -419,8 +419,8 @@ export function Results({
                         >
                             {imageURL && <img src={imageURL} alt="Full screen" className="max-h-[85vh] max-w-[90vw] object-contain" />}
                             {heatmapOpacity > 0 && (
-                                heatmap ? (
-                                    <img src={heatmap} alt="Heatmap" className="absolute inset-0 h-full w-full object-contain transition-opacity duration-200" style={{ opacity: heatmapOpacity }} />
+                                attentionOverlay ? (
+                                    <img src={attentionOverlay} alt="Attention Overlay" className="absolute inset-0 h-full w-full object-contain transition-opacity duration-200" style={{ opacity: heatmapOpacity }} />
                                 ) : (
                                     <div
                                         className="absolute inset-0 pointer-events-none mix-blend-screen transition-opacity duration-200"

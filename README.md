@@ -49,10 +49,25 @@ Pleural_Thickening       0.16      0.53      0.25       345
 ```
 
 ### 🤖 2. RAG Pipeline & "Agentic" Logic
-- **Clinical Grounding**: Built a RAG pipeline using **LangChain**, **Google Gemma 4 (31B Dense)**, and **Pinecone**. It retrieves relevant sections from BTS and NICE clinical guidelines to back up every report.
+- **Clinical Grounding**: Built a RAG pipeline using **LangChain**, **Google Gemma 4 (31B Dense)**, and **Pinecone**. It retrieves relevant sections from BTS, NICE, AHA/ACC, and Fleischner clinical guidelines to back up every report.
 - **Reasoning with Thinking Mode**: Leverages Gemma 4's **built-in reasoning mode** to perform internal cross-verification between vision findings and retrieved guidelines, minimizing hallucinations and ensuring expert-level accuracy.
+- **Trustworthy Citations**: Retrieved guideline chunks are post-filtered against the primary finding before being shown to the user. If no doc actually mentions the pathology, the sources list is empty rather than misleading, and the model is explicitly prompted to fall back to standard radiology in that case.
+- **Heatmap-Grounded Reasoning**: The Gemma 4 prompt requires the model to first identify which anatomical region the Grad-CAM overlay highlights, then state whether it matches the expected location for the predicted pathology. If they disagree, the model lowers diagnostic confidence in its Patient Summary instead of rubber-stamping.
 
-### ☁️ 3. Cloud-Native Deployment (Hybrid GCP/Azure)
+### 🧪 3. Multimodal LLM Eval Harness with Cross-Family Judge
+A reproducible regression suite for the LLM stage, designed to catch prompt drift, prompt leakage, hallucinated drug doses, and clinically unsafe phrasing **before** they reach users.
+
+**Testing process used to verify Gemma 4:**
+
+1. **Deterministic input fixtures.** Twelve hand-crafted `SummarizeRequest` payloads in [`backend/evals/cases.py`](backend/evals/cases.py) cover high-confidence single findings, urgent life-threats (Pneumothorax, acute Edema), oncology workup (Mass), multi-finding mixes, the sub-threshold short-circuit path, just-above-threshold edges, and rare pathologies that exercise the knowledge-fallback rule (Hernia is intentionally absent from the indexed guidelines). Each case ships with expected primary finding, urgency flag, and case-specific keyword expectations.
+2. **Tier 1 (deterministic asserts).** Each report from `/summarize` runs through cheap regex and substring checks: required section headers present, primary finding mentioned, no internal scaffolding leakage (`INTERNAL DATA`, `RELEVANT_GUIDELINES`, `KNOWLEDGE FALLBACK`, etc), no forbidden phrases per case. These are free, run in seconds, and catch the obvious prompt-leak and structural regressions.
+3. **Tier 2 (LLM-as-judge).** Cases that pass Tier 1 are scored by **Qwen3.6-Plus** via OpenRouter. Qwen is a different model family from Gemma, which prevents the same-family rubber-stamping observed when Gemma judged its own outputs. The judge runs a forced-decomposition rubric: it must independently identify the visible heatmap region before being allowed to judge whether the report's claim about that region is consistent. It also flags hallucinated drug doses, prompt scaffolding leakage, missing sections, urgency tone for life-threatening findings, and scope-creep into commitment language.
+4. **Verdict and gating.** The runner aggregates Tier 1 and Tier 2 results. Exit code is non-zero on any keyword failure or judge `verdict: FAIL`, which makes the suite directly CI-droppable.
+5. **Iteration loop.** When a case fails, the surfaced reason (e.g. "report commits to initiating treatment", "uses educational language for an urgent finding") feeds directly back into the `/summarize` prompt in [`backend/api.py`](backend/api.py). Two real prompt-quality issues caught this way (treatment-scope creep, weak urgency language for life-threats) became explicit rules in the prompt. The judge backend is env-driven (`JUDGE_BACKEND=openrouter|gemini`, `JUDGE_MODEL=...`), so any multimodal LLM can be A/B tested on the same fixtures without code changes.
+
+The full 12-case suite runs in roughly three minutes against a local backend. See [`backend/evals/`](backend/evals/) for cases, asserts, judge rubric, and the runner.
+
+### ☁️ 4. Cloud-Native Deployment (Hybrid GCP/Azure)
 - **Backend**: Containerized FastAPI (Python) on **Google Cloud Run** (Scale-to-Zero optimized, dynamically allocated memory & ports).
 - **Frontend**: React (TypeScript) on **Azure Static Web Apps**.
 - **Database**: **Azure Cosmos DB** (NoSQL) for audit logging and feedback loops.
@@ -61,7 +76,7 @@ Pleural_Thickening       0.16      0.53      0.25       345
 - **Model Registry Pattern**: Large model weights (~500MB) are streamed from **Azure Blob Storage** via time-limited SAS URLs during container boot, keeping Docker images lightweight and portable.
 - **Infrastructure as Code (IaC)**: Deployments are automated using **Azure Bicep** and **GitHub Actions**.
 
-### 🔌 4. The Future of AI Integration (MCP)
+### 🔌 5. The Future of AI Integration (MCP)
 - **Model Context Protocol**: Native support for **MCP**, allowing Anthropic's Claude or other AI agents to use PulmoLens as a "tool" to analyze images directly via a base64 encoded string.
 
 ---
@@ -103,7 +118,7 @@ graph TD
 - Node.js 18+
 
 ### 2. Environment Setup
-Create a `.env` in both `backend/` and `frontend/` folders using the provided `.env.example` templates. You'll need API keys for **Gemma 4 (Google AI)**, **Pinecone**, and access to **Azure/GCP** for cloud features.
+Create a `.env` in both `backend/` and `frontend/` folders using the provided `.env.example` templates. You'll need API keys for **Gemma 4 (Google AI)**, **Pinecone**, and access to **Azure/GCP** for cloud features. To run the LLM eval harness, also add an `OPENROUTER_API_KEY`. This key is used only by `backend/evals/`, not by production.
 
 ### 3. Local Run
 ```bash
@@ -118,11 +133,21 @@ npm install
 npm run dev
 ```
 
+### 4. Run the LLM Eval Harness
+```bash
+# In a separate terminal, with the backend running:
+cd backend
+python -m evals.run_evals               # full 12-case suite with judge
+python -m evals.run_evals --no-judge    # deterministic asserts only (free)
+python -m evals.run_evals --case rare_hernia_fallback   # single case
+```
+
 ---
 
 ## 📄 Repository Structure
 
 - `/backend`: FastAPI service, model loading, and RAG logic.
+- `/backend/evals`: LLM regression suite. Test cases, keyword asserts, multimodal Qwen3.6-Plus judge, and runner.
 - `/frontend`: React + TypeScript UI with beautiful glassmorphism design.
 - `/ml`: Model architecture (PyTorch), training scripts, and evaluation utilities.
 - `/infra`: Azure Bicep templates and deployment workflows.

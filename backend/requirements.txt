@@ -20,6 +20,9 @@ python-dotenv
 langchain
 langchain-google-genai
 langchain-pinecone
+# Used by the eval judge to call OpenRouter (Qwen3.6, GLM, Claude, etc.)
+# via the OpenAI-compatible API. Prod /summarize does not depend on this.
+langchain-openai
 
 # Azure Persistence
 azure-cosmos

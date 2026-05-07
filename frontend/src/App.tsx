@@ -34,7 +34,7 @@ export default function App() {
   const [progress, setProgress] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [heatmapOpacity, setHeatmapOpacity] = useState<number>(0.5);
-  const [heatmap, setHeatmap] = useState<string | null>(null);
+  const [attentionOverlay, setAttentionOverlay] = useState<string | null>(null);
   const [imageId, setImageId] = useState<string | null>(null);
   const [report, setReport] = useState<string | null>(null);
   const [sources, setSources] = useState<string[]>([]);
@@ -91,23 +91,23 @@ export default function App() {
     setErrorMsg(null);
     setStep("processing");
     try {
-      const { predictions, heatmap, imageId } = await uploadAndAnalyze(f);
-      
+      const { predictions, attentionOverlay, imageId } = await uploadAndAnalyze(f);
+
       setServerPreds(predictions || null);
-      setHeatmap(heatmap || null);
+      setAttentionOverlay(attentionOverlay || null);
       setImageId(imageId || null);
       setProgress(100);
       setStep("results");
 
       // Stage 2: Trigger AI Summarization in the background
-      if (predictions && heatmap) {
+      if (predictions && attentionOverlay) {
         setIsSummarizing(true);
         setReport(""); // Clear previous report for streaming
         setSources([]);
         try {
           await summarizeAIStream(
-            predictions, 
-            heatmap, 
+            predictions,
+            attentionOverlay,
             (chunk) => setReport(prev => (prev || "") + chunk),
             (sources) => setSources(sources)
           );
@@ -158,7 +158,7 @@ export default function App() {
                 setFile(null);
                 setImageURL(null);
                 setServerPreds(null);
-                setHeatmap(null);
+                setAttentionOverlay(null);
                 setImageId(null);
                 setReport(null);
                 setSources([]);
@@ -168,7 +168,7 @@ export default function App() {
               showPatientSheet={showPatientSheet}
               setShowPatientSheet={setShowPatientSheet}
               errorMsg={errorMsg}
-              heatmap={heatmap}
+              attentionOverlay={attentionOverlay}
               imageId={imageId}
               report={report}
               sources={sources}
