@@ -17,10 +17,9 @@ const MEDICAL_VERBS = [
   "Differentiating",
 ];
 
-// EKG path: flat → small P bump → flat → QRS spike → flat → T bump → flat.
-// viewBox is 120x24; line baseline y=12.
-const EKG_PATH =
-  "M0 12 H30 l2 -2 l2 2 H50 l2 6 l2 -14 l2 14 l2 -6 H78 l3 -3 l3 3 H120";
+// Compact EKG: flat → tight QRS (Q-dip, R-spike, S-dip) → flat. The spike
+// sits in the middle of the trace so the bright sweep crosses it cleanly.
+const EKG_PATH = "M0 9 H22 l1 1 l1 -7 l2 14 l1 -7 l1 -1 H64";
 
 const CharacterAnimator: React.FC<{ text: string; trailingDots?: number }> = ({
   text,
@@ -32,11 +31,8 @@ const CharacterAnimator: React.FC<{ text: string; trailingDots?: number }> = ({
       {chars.map((char, index) => (
         <span
           key={`${text}-${index}`}
-          className="inline-block animate-char-fade-in"
-          style={{
-            animationDelay: `${index * 35}ms`,
-            animationFillMode: 'both',
-          }}
+          className="char-fade-up"
+          style={{ animationDelay: `${index * 35}ms` }}
         >
           {char === ' ' ? ' ' : char}
         </span>
@@ -49,71 +45,56 @@ export const ThinkingLoader: React.FC = () => {
   const [verbIndex, setVerbIndex] = useState(0);
 
   useEffect(() => {
-    const verbInterval = setInterval(() => {
+    const id = setInterval(() => {
       setVerbIndex((prev) => (prev + 1) % MEDICAL_VERBS.length);
     }, 2800);
-    return () => clearInterval(verbInterval);
+    return () => clearInterval(id);
   }, []);
 
   return (
-    <div className="inline-flex items-center gap-3 py-2 px-3.5 bg-white/70 backdrop-blur-xl rounded-lg border border-slate-200/80 shadow-sm mx-auto animate-in fade-in duration-500">
-      {/* EKG trace */}
+    <div className="inline-flex items-center gap-3 py-1.5 px-3 bg-white/80 backdrop-blur-xl rounded-lg border border-slate-200 shadow-sm animate-in fade-in duration-500">
       <svg
-        viewBox="0 0 120 24"
-        className="h-5 w-[60px] shrink-0 overflow-visible"
+        viewBox="0 0 64 18"
+        className="h-4 w-[52px] shrink-0 overflow-visible"
         aria-hidden="true"
       >
-        {/* Muted baseline trace */}
         <path
           d={EKG_PATH}
           fill="none"
           stroke="currentColor"
-          strokeWidth="1"
+          strokeWidth="1.2"
           strokeLinecap="round"
           strokeLinejoin="round"
           className="text-slate-200"
         />
-        {/* Animated bright sweep — short dash travels along the path */}
         <path
           d={EKG_PATH}
           pathLength={100}
           fill="none"
           stroke="rgb(79 70 229)"
-          strokeWidth="1.6"
+          strokeWidth="1.8"
           strokeLinecap="round"
           strokeLinejoin="round"
           className="ekg-sweep"
         />
       </svg>
 
-      <div className="flex flex-col leading-tight">
-        <h3
-          key={verbIndex}
-          className="text-[13px] font-semibold text-slate-800 tracking-tight"
-        >
-          <CharacterAnimator text={MEDICAL_VERBS[verbIndex]} />
-        </h3>
-        <p className="text-[10px] font-medium text-slate-400 tracking-wide mt-0.5">
-          synthesizing analysis
-        </p>
-      </div>
+      <h3
+        key={verbIndex}
+        className="text-sm font-medium text-slate-800 tracking-tight leading-none"
+      >
+        <CharacterAnimator text={MEDICAL_VERBS[verbIndex]} />
+      </h3>
 
       <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes char-fade-in {
-          0% { opacity: 0; transform: translateY(6px); filter: blur(2px); }
-          100% { opacity: 1; transform: translateY(0); filter: blur(0); }
-        }
-        .animate-char-fade-in {
-          animation: char-fade-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
         @keyframes ekg-sweep {
-          0%   { stroke-dashoffset: 22; }
+          0%   { stroke-dashoffset: 14; }
           100% { stroke-dashoffset: -100; }
         }
         .ekg-sweep {
-          stroke-dasharray: 22 100;
-          stroke-dashoffset: 22;
-          filter: drop-shadow(0 0 2.5px rgba(99, 102, 241, 0.8));
+          stroke-dasharray: 14 100;
+          stroke-dashoffset: 14;
+          filter: drop-shadow(0 0 2.5px rgba(99, 102, 241, 0.85));
           animation: ekg-sweep 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
         }
       `}} />

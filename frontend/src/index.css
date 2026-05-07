@@ -4,3 +4,26 @@
 
 html, body, #root { height: 100%; }
 
+body {
+  font-feature-settings: "cv11", "ss01", "ss03";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Shared character-reveal animation used by the thinking loader and the
+   streamed clinical synthesis. Each char animates exactly once on mount. */
+@keyframes char-fade-up {
+  0%   { opacity: 0; transform: translateY(6px); filter: blur(1.5px); }
+  100% { opacity: 1; transform: translateY(0);   filter: blur(0); }
+}
+.char-fade-up {
+  display: inline-block;
+  animation: char-fade-up 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes caret-blink {
+  0%, 50%      { opacity: 1; }
+  50.01%, 100% { opacity: 0; }
+}
+.animate-caret-blink { animation: caret-blink 1s steps(1) infinite; }
+

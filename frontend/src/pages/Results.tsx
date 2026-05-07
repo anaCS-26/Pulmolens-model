@@ -70,6 +70,22 @@ function useTypewriter(target: string, baseCps = 70): string {
     return shown;
 }
 
+// Render `text` as individually-animated <span>s keyed by absolute offset
+// `start`. React reuses spans across re-renders for offsets that haven't
+// changed, so each char animates exactly once on first mount.
+function AnimatedChars({ text, start, bold }: { text: string; start: number; bold?: boolean }) {
+    const Wrap = bold ? 'strong' : 'span';
+    return (
+        <Wrap className={bold ? "font-semibold text-slate-900" : undefined}>
+            {Array.from(text).map((ch, k) => (
+                <span key={start + k} className="char-fade-up">
+                    {ch === ' ' ? ' ' : ch}
+                </span>
+            ))}
+        </Wrap>
+    );
+}
+
 function MarkdownLite({ text, isStreaming }: { text: string; isStreaming?: boolean }) {
     const displayed = useTypewriter(text || "");
     const stillTyping = !!isStreaming || displayed.length < (text?.length || 0);
@@ -77,23 +93,45 @@ function MarkdownLite({ text, isStreaming }: { text: string; isStreaming?: boole
     if (!displayed) return null;
     const lines = displayed.split("\n");
 
+    // Track the running absolute character offset so each <span> key is
+    // stable across re-renders — already-mounted chars don't re-animate.
+    let offset = 0;
+
     return (
-        <div className="space-y-1.5">
+        <div className="space-y-1">
             {lines.map((l, i) => {
                 const isLast = i === lines.length - 1;
+                const lineStart = offset;
+                offset += l.length + 1; // +1 for the newline we split on
+
                 const trimmed = l.trim();
                 const isBullet = trimmed.startsWith("*") && !trimmed.startsWith("**");
-                const content = isBullet ? trimmed.slice(1).trim() : trimmed;
+                const indentDelta = l.indexOf(trimmed);
+                const content = isBullet ? trimmed.slice(1).trimStart() : trimmed;
 
-                if (!content) return <div key={i} className="h-2" />;
+                if (!content) return <div key={`gap-${lineStart}`} className="h-2" />;
 
-                const parts = content.split(/(\*\*?.*?\*\*?)/);
+                // Compute where `content` begins inside the original line so each
+                // span carries a globally-unique, stable key.
+                const contentStartInLine = isBullet
+                    ? l.indexOf("*") + 1 + (l.slice(l.indexOf("*") + 1).length - l.slice(l.indexOf("*") + 1).trimStart().length)
+                    : indentDelta;
+                let cursor = lineStart + contentStartInLine;
+
+                const parts = content.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
                 const rendered = parts.map((p, j) => {
-                    if (/^\*\*?.*?\*\*?$/.test(p)) {
-                        const cleanText = p.replace(/\*/g, "");
-                        return <strong key={j} className="font-semibold text-slate-900 not-italic">{cleanText}</strong>;
-                    }
-                    return <React.Fragment key={j}>{p}</React.Fragment>;
+                    const isBold = /^\*\*[^*]+\*\*$/.test(p);
+                    const inner = isBold ? p.slice(2, -2) : p;
+                    const node = (
+                        <AnimatedChars
+                            key={`${lineStart}-${j}`}
+                            text={inner}
+                            start={cursor + (isBold ? 2 : 0)}
+                            bold={isBold}
+                        />
+                    );
+                    cursor += p.length;
+                    return node;
                 });
 
                 const caret = stillTyping && isLast ? (
@@ -102,21 +140,14 @@ function MarkdownLite({ text, isStreaming }: { text: string; isStreaming?: boole
 
                 if (isBullet) {
                     return (
-                        <div key={i} className="flex items-start gap-2 pl-2">
-                            <div className="h-1.5 w-1.5 rounded-full bg-slate-400 mt-2 shrink-0" />
+                        <div key={`b-${lineStart}`} className="flex items-start gap-2.5 pl-1">
+                            <div className="h-1.5 w-1.5 rounded-full bg-slate-400 mt-2.5 shrink-0" />
                             <div>{rendered}{caret}</div>
                         </div>
                     );
                 }
-                return <div key={i} className="mb-2 last:mb-0">{rendered}{caret}</div>;
+                return <div key={`p-${lineStart}`} className="mb-1.5 last:mb-0">{rendered}{caret}</div>;
             })}
-            <style dangerouslySetInnerHTML={{ __html: `
-                @keyframes caret-blink {
-                    0%, 50% { opacity: 1; }
-                    50.01%, 100% { opacity: 0; }
-                }
-                .animate-caret-blink { animation: caret-blink 1s steps(1) infinite; }
-            `}} />
         </div>
     );
 }
@@ -253,38 +284,42 @@ export function Results({
 
                 {/* AI RAG REPORT AREA - PLACED BELOW GRADCAM AS REQUESTED */}
                 {isSummarizing && !(typeof report === 'string' && report.length > 0) && (
-                    <div className="mt-8">
+                    <div className="mt-8 flex justify-center">
                         <ThinkingLoader />
                     </div>
                 )}
 
                 {typeof report === 'string' && report.length > 0 && (
-                    <div className="mt-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                        <div className="border-l border-slate-300 pl-6 md:pl-8">
-                            <div className="flex items-baseline justify-between mb-4 gap-4">
-                                <div className="flex items-baseline gap-3 min-w-0">
-                                    <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-slate-400 shrink-0">§ Note</span>
-                                    <h4 className="font-serif text-xl md:text-2xl text-slate-900 italic font-medium leading-none truncate">
+                    <div className="mt-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <div className="relative rounded-2xl border border-slate-200 bg-white shadow-sm p-6 md:p-8 overflow-hidden">
+                            <span aria-hidden className="absolute left-0 top-0 bottom-0 w-[3px] bg-indigo-500/70" />
+
+                            <div className="flex items-baseline justify-between mb-5 gap-4">
+                                <div className="flex flex-col min-w-0">
+                                    <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-slate-400 mb-1.5">
+                                        AI-Assisted Interpretation
+                                    </span>
+                                    <h4 className="text-base md:text-lg font-semibold text-slate-900 tracking-tight leading-none">
                                         Clinical synthesis
                                     </h4>
                                 </div>
                                 {sources && sources.length > 0 && (
-                                    <span className="font-mono text-[10px] tracking-wider text-slate-400 shrink-0">
+                                    <span className="font-mono text-[10px] tracking-wider text-slate-400 shrink-0 self-end">
                                         {sources.length} {sources.length === 1 ? 'ref.' : 'refs.'}
                                     </span>
                                 )}
                             </div>
 
-                            <div className="font-serif text-[15.5px] md:text-base text-slate-700 leading-[1.75] [&_strong]:text-slate-900 [&_strong]:font-semibold">
+                            <div className="text-[15px] text-slate-700 leading-[1.75]">
                                 <MarkdownLite text={report} isStreaming={isSummarizing} />
                             </div>
 
                             {sources && sources.length > 0 && (
-                                <div className="mt-6 pt-4 border-t border-slate-200/70">
+                                <div className="mt-6 pt-4 border-t border-slate-200">
                                     <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-slate-400 mb-2.5">References</div>
                                     <ol className="space-y-1.5 list-none">
                                         {sources.map((s, idx) => (
-                                            <li key={idx} className="font-serif text-[13px] text-slate-500 leading-snug flex gap-2.5">
+                                            <li key={idx} className="text-[13px] text-slate-500 leading-snug flex gap-2.5">
                                                 <span className="font-mono text-[11px] text-slate-400 shrink-0 pt-px">[{idx + 1}]</span>
                                                 <span>{s}</span>
                                             </li>
