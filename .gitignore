@@ -59,3 +59,4 @@ backend/dockerignore
 
 # Personal AI Instructions
 GEMINI.md
+CLAUDE.md

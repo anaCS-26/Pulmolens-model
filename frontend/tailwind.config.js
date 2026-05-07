@@ -4,6 +4,12 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  theme: { extend: {} },
+  theme: {
+    extend: {
+      fontFamily: {
+        serif: ['Newsreader', 'ui-serif', 'Georgia', 'Cambria', 'Times New Roman', 'serif'],
+      },
+    },
+  },
   plugins: [],
 };

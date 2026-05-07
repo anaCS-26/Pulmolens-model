@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Search, Image as ImageIcon, ThumbsUp, ThumbsDown, Maximize2, X, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { cn } from "../utils/cn";
 import { submitFeedback } from "../api";
@@ -28,42 +28,59 @@ interface ResultsProps {
     isSummarizing?: boolean;
 }
 
-// Improved component to handle character-level streaming animation with a typewriter effect
-function StreamingCharacterText({ text, isComplete }: { text: string; isComplete?: boolean }) {
-    if (!text) return null;
-    
-    // We treat the text as a continuous sequence of characters
-    // Using index-based delay to create a typewriter effect
-    const characters = text.split("");
-    const animationSpeed = 25; // ms per character
+// Reveals `target` one character at a time. Adapts cadence when the
+// streaming backlog grows so we never fall far behind the model.
+function useTypewriter(target: string, baseCps = 70): string {
+    const [shown, setShown] = useState("");
+    const shownRef = useRef("");
+    shownRef.current = shown;
 
-    return (
-        <span className="inline">
-            {characters.map((char, index) => (
-                <span 
-                    key={`char-${index}`}
-                    className="inline-block animate-report-char"
-                    style={{ 
-                        animationDelay: `${index * animationSpeed}ms`,
-                        animationFillMode: 'both'
-                    }}
-                >
-                    {char === " " ? "\u00A0" : char}
-                </span>
-            ))}
-            {!isComplete && (
-                <span className="inline-block w-1.5 h-4 bg-indigo-500 ml-1 animate-pulse rounded-sm align-middle" />
-            )}
-        </span>
-    );
+    // If the upstream buffer was reset/replaced (no longer a prefix), restart.
+    useEffect(() => {
+        if (target.length === 0) {
+            if (shownRef.current.length !== 0) setShown("");
+            return;
+        }
+        if (!target.startsWith(shownRef.current)) {
+            setShown("");
+        }
+    }, [target]);
+
+    useEffect(() => {
+        if (shown.length >= target.length) return;
+        let raf = 0;
+        let last = performance.now();
+        const tick = (now: number) => {
+            const dt = now - last;
+            last = now;
+            setShown((prev) => {
+                if (prev.length >= target.length) return prev;
+                const remaining = target.length - prev.length;
+                // Catch-up: speed climbs with backlog so a 500-char burst drains in ~1s.
+                const cps = baseCps + Math.max(0, remaining - 30) * 6;
+                const advance = Math.max(1, Math.round((dt / 1000) * cps));
+                return target.slice(0, Math.min(target.length, prev.length + advance));
+            });
+            raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, [target, shown.length, baseCps]);
+
+    return shown;
 }
 
 function MarkdownLite({ text, isStreaming }: { text: string; isStreaming?: boolean }) {
-    if (!text) return null;
-    const lines = text.split("\n");
+    const displayed = useTypewriter(text || "");
+    const stillTyping = !!isStreaming || displayed.length < (text?.length || 0);
+
+    if (!displayed) return null;
+    const lines = displayed.split("\n");
+
     return (
         <div className="space-y-1.5">
             {lines.map((l, i) => {
+                const isLast = i === lines.length - 1;
                 const trimmed = l.trim();
                 const isBullet = trimmed.startsWith("*") && !trimmed.startsWith("**");
                 const content = isBullet ? trimmed.slice(1).trim() : trimmed;
@@ -74,30 +91,31 @@ function MarkdownLite({ text, isStreaming }: { text: string; isStreaming?: boole
                 const rendered = parts.map((p, j) => {
                     if (/^\*\*?.*?\*\*?$/.test(p)) {
                         const cleanText = p.replace(/\*/g, "");
-                        return <strong key={j} className="font-bold text-slate-900">{cleanText}</strong>;
+                        return <strong key={j} className="font-semibold text-slate-900 not-italic">{cleanText}</strong>;
                     }
-                    // For non-bold text, apply character-level animation if streaming
-                    return isStreaming ? <StreamingCharacterText key={j} text={p} isComplete={!isStreaming} /> : p;
+                    return <React.Fragment key={j}>{p}</React.Fragment>;
                 });
+
+                const caret = stillTyping && isLast ? (
+                    <span className="inline-block w-[2px] h-[1em] bg-slate-400 ml-0.5 align-[-0.15em] animate-caret-blink" />
+                ) : null;
 
                 if (isBullet) {
                     return (
                         <div key={i} className="flex items-start gap-2 pl-2">
-                             <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 mt-2 shrink-0" />
-                             <div>{rendered}</div>
+                            <div className="h-1.5 w-1.5 rounded-full bg-slate-400 mt-2 shrink-0" />
+                            <div>{rendered}{caret}</div>
                         </div>
                     );
                 }
-                return <div key={i} className="mb-2 last:mb-0">{rendered}</div>;
+                return <div key={i} className="mb-2 last:mb-0">{rendered}{caret}</div>;
             })}
             <style dangerouslySetInnerHTML={{ __html: `
-                @keyframes report-char-in {
-                    0% { opacity: 0; transform: translateY(8px); filter: blur(1px); }
-                    100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+                @keyframes caret-blink {
+                    0%, 50% { opacity: 1; }
+                    50.01%, 100% { opacity: 0; }
                 }
-                .animate-report-char {
-                    animation: report-char-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-                }
+                .animate-caret-blink { animation: caret-blink 1s steps(1) infinite; }
             `}} />
         </div>
     );
@@ -234,40 +252,47 @@ export function Results({
                 </div>
 
                 {/* AI RAG REPORT AREA - PLACED BELOW GRADCAM AS REQUESTED */}
-                {isSummarizing && (
+                {isSummarizing && !(typeof report === 'string' && report.length > 0) && (
                     <div className="mt-8">
                         <ThinkingLoader />
                     </div>
                 )}
 
-                {typeof report === 'string' && report.length > 0 && !isSummarizing && (
-                    <div className="mt-8 rounded-2xl bg-gradient-to-br from-indigo-50/50 to-blue-50/50 border border-indigo-100/20 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500 shadow-sm">
-                        <div className="bg-white/40 backdrop-blur-sm px-5 py-3 border-b border-indigo-100/20 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <span className="bg-indigo-100 text-indigo-700 p-1 rounded-lg text-lg">💡</span>
-                                <h4 className="text-sm font-bold text-indigo-900 tracking-tight uppercase">Medical AI Agent Summary</h4>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] uppercase font-bold text-indigo-500/80 bg-indigo-100/30 px-2.5 py-1 rounded-full">RAG Grounded</span>
-                            </div>
-                        </div>
-                        
-                        <div className="p-6 text-sm md:text-base text-slate-800 leading-relaxed min-h-[100px]">
-                            <MarkdownLite text={report} isStreaming={isSummarizing} />
-                        </div>
-
-                        {sources && sources.length > 0 && (
-                             <div className="px-6 pb-6 mt-[-10px]">
-                                <div className="flex flex-wrap gap-2 items-center">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mr-2">Citations:</span>
-                                    {sources.map((s, idx) => (
-                                        <span key={idx} className="bg-white/60 border border-slate-100 px-2 py-0.5 rounded text-[9px] text-slate-500 shadow-sm">
-                                            {s}
-                                        </span>
-                                    ))}
+                {typeof report === 'string' && report.length > 0 && (
+                    <div className="mt-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <div className="border-l border-slate-300 pl-6 md:pl-8">
+                            <div className="flex items-baseline justify-between mb-4 gap-4">
+                                <div className="flex items-baseline gap-3 min-w-0">
+                                    <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-slate-400 shrink-0">§ Note</span>
+                                    <h4 className="font-serif text-xl md:text-2xl text-slate-900 italic font-medium leading-none truncate">
+                                        Clinical synthesis
+                                    </h4>
                                 </div>
-                             </div>
-                        )}
+                                {sources && sources.length > 0 && (
+                                    <span className="font-mono text-[10px] tracking-wider text-slate-400 shrink-0">
+                                        {sources.length} {sources.length === 1 ? 'ref.' : 'refs.'}
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="font-serif text-[15.5px] md:text-base text-slate-700 leading-[1.75] [&_strong]:text-slate-900 [&_strong]:font-semibold">
+                                <MarkdownLite text={report} isStreaming={isSummarizing} />
+                            </div>
+
+                            {sources && sources.length > 0 && (
+                                <div className="mt-6 pt-4 border-t border-slate-200/70">
+                                    <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-slate-400 mb-2.5">References</div>
+                                    <ol className="space-y-1.5 list-none">
+                                        {sources.map((s, idx) => (
+                                            <li key={idx} className="font-serif text-[13px] text-slate-500 leading-snug flex gap-2.5">
+                                                <span className="font-mono text-[11px] text-slate-400 shrink-0 pt-px">[{idx + 1}]</span>
+                                                <span>{s}</span>
+                                            </li>
+                                        ))}
+                                    </ol>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 
