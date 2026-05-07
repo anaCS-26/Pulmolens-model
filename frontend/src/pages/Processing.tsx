@@ -16,8 +16,10 @@ export function Processing({ progress }: ProcessingProps) {
                 <div className="mt-4 w-full h-3 rounded-full bg-slate-100 overflow-hidden">
                     <div className="h-full bg-slate-900 transition-all" style={{ width: `${progress}%` }} />
                 </div>
-                <p className="mt-2 text-sm text-slate-600">Running your model on the server…</p>
-                {progress > 60 && (
+                <p className="mt-2 text-sm text-slate-600">
+                    {import.meta.env.VITE_DEMO_MODE === 'true' ? "Simulating analysis pipeline..." : "Running your model on the server..."}
+                </p>
+                {progress > 60 && import.meta.env.VITE_DEMO_MODE !== 'true' && (
                     <p className="mt-4 text-xs text-amber-600 animate-pulse bg-amber-50 p-2 rounded-lg border border-amber-100 flex items-center gap-2">
                         <span>⚠️</span>
                         The server is currently warming up (this happens if it hasn't been used recently). Please stay on this screen.

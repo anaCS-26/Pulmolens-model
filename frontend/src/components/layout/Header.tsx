@@ -37,7 +37,9 @@ export function Header({ step, setStep, agreed, hasFile }: HeaderProps) {
                     </div>
                     <div>
                         <div className="text-xl font-semibold tracking-tight">PulmoLens</div>
-                        <div className="text-xs text-slate-500">AI-assisted CXR Guidance (Demo)</div>
+                        <div className="text-xs text-slate-500">
+                            AI-assisted CXR Guidance {import.meta.env.VITE_DEMO_MODE === 'true' ? "(Mock Mode)" : "(Demo)"}
+                        </div>
                     </div>
                 </div>
                 <nav className="flex items-center gap-2">

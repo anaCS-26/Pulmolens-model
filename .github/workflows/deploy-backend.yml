@@ -1,8 +1,8 @@
 name: Deploy Backend to Google Cloud Run
 on:
   push:
-    branches: [ main ]
-    paths: [ 'backend/**', '.github/workflows/deploy-backend.yml' ]
+    branches: [main]
+    paths: ["backend/**", ".github/workflows/deploy-backend.yml"]
 
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -70,4 +70,4 @@ jobs:
             STORAGE_CONN_STR=${{ secrets.STORAGE_CONN_STR }}
             RAG_ENABLED=true
             ALLOW_UNSAFE_MODEL_DESERIALIZATION=true
-          flags: '--allow-unauthenticated --memory=4Gi'
+          flags: "--allow-unauthenticated --memory=4Gi"
