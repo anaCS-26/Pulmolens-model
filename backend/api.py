@@ -21,6 +21,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_core.messages import HumanMessage
 from langchain_pinecone import PineconeVectorStore
 from azure.cosmos import CosmosClient
 from azure.storage.blob import BlobServiceClient
@@ -92,13 +93,12 @@ try:
     )
     vector_store = PineconeVectorStore(index_name="pulmolens-guidelines", embedding=rag_embeddings)
     
-    # Updated to the new high-efficiency Gemini 2.5 Flash Lite model
-    # Thinking Budget enables reasoning to prevent hallucinations (2026 standard)
-    # Temperature 1.0 is recommended for reasoning models to avoid logic loops
+    # Updated to the new Gemma 4 31B Dense model for advanced reasoning
+    # Gemma 4 is a state-of-the-art open-weight model with multimodal capabilities
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-lite",
-        system_instruction="You are a Senior Radiographic Consultant AI. Provide expert radiographic signatures and clinical management plans grounded in guidelines. Always verify your summary against the specific raw vision data provided.",
-        thinking_budget=1024,
+        model="gemma-4-31b-it",
+        system_instruction="You are a Senior Radiographic Consultant AI. Provide expert radiographic signatures and clinical management plans grounded in guidelines. Always verify your summary against the specific raw vision data provided. Use your advanced reasoning to explain the relationship between findings and guidelines.",
+        thinking_level="high",
         temperature=1.0
     )
     logger.info("✅ RAG components initialized (Gemini 2.5 Flash Lite + Thinking Mode + Pinecone 3072)")
@@ -409,9 +409,14 @@ async def predict(file: UploadFile = File(...)):
             **Clinical Management**: [Expert next steps or diagnostic follow-up]
             **Patient Summary**: [A clear, empathetic explanation of the {sorted_all_findings[0][0]} finding]
             """
-            
-            # 3. Call LLM
-            response = llm.invoke(prompt)
+
+            # 3. Call LLM with Multimodal Input (Phase 2 Enabled)
+            # We pass the prompt and the combined overlaid heatmap image
+            message = HumanMessage(content=[
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": heatmap_b64}}
+            ])
+            response = llm.invoke([message])
             
             # --- FIX: Handle List-style response.content from newer Gemini models ---
             if isinstance(response.content, str):
