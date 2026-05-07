@@ -2,7 +2,7 @@ name: Deploy Frontend to Azure SWA
 on:
   push:
     branches: [ main ]
-    paths: [ 'frontend/**' ]
+    paths: [ 'frontend/**', '.github/workflows/deploy-frontend.yml' ]
 
 jobs:
   build_and_deploy:
