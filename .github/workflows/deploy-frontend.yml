@@ -22,7 +22,15 @@ jobs:
             echo "API_URL=${{ secrets.VITE_API_BASE_URL_STAGING || 'https://pulmolens-backend-frzdnerigq-uc.a.run.app' }}" >> $GITHUB_ENV
           fi
 
-      - name: Build And Deploy
+      - name: Build Frontend
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+        env:
+          VITE_API_BASE_URL: ${{ env.API_URL }}
+
+      - name: Deploy to Azure
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ env.SWA_TOKEN }}
@@ -31,6 +39,5 @@ jobs:
           app_location: "frontend" 
           api_location: "" 
           output_location: "dist"
-        env:
-          VITE_API_BASE_URL: ${{ env.API_URL }}
+          skip_app_build: true
 
