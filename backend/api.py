@@ -113,7 +113,6 @@ except Exception as e:
 # Add CORS middleware
 origins = [
     "https://victorious-sky-0836ce10f.3.azurestaticapps.net",
-    "https://ashy-field-00930a60f.azurestaticapps.net",
     "http://localhost:5173",
     "http://127.0.0.1:5173"
 ]
