@@ -1,20 +1,29 @@
 name: Deploy Backend to Google Cloud Run
 on:
   push:
-    branches: [main]
+    branches: ["**"]
     paths: ["backend/**", ".github/workflows/deploy-backend.yml"]
 
 env:
   GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GCP_REGION: us-central1
-  SERVICE_NAME: pulmolens-backend
   IMAGE_NAME: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/pulmolens-repo/pulmolens-backend
+
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: production
     steps:
+      - name: Set Service Name
+        id: service_name
+        shell: bash
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "SERVICE_NAME=pulmolens-backend" >> $GITHUB_ENV
+          else
+            echo "SERVICE_NAME=pulmolens-backend-staging" >> $GITHUB_ENV
+          fi
+
       - name: Checkout Source
         uses: actions/checkout@v4
 

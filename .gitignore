@@ -58,4 +58,3 @@ frontend/inference-api/models/*.pt
 backend/dockerignore
 
 # Personal AI Instructions
-GEMINI.md
