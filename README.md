@@ -77,9 +77,6 @@ The full 12-case suite runs in roughly three minutes against a local backend. Se
 - **Model Registry Pattern**: Large model weights (~500MB) are streamed from **Azure Blob Storage** via time-limited SAS URLs during container boot, keeping Docker images lightweight and portable.
 - **Infrastructure as Code (IaC)**: Deployments are automated using **Azure Bicep** and **GitHub Actions**.
 
-### 🔌 5. The Future of AI Integration (MCP)
-- **Model Context Protocol**: Native support for **MCP**, allowing Anthropic's Claude or other AI agents to use PulmoLens as a "tool" to analyze images directly via a base64 encoded string.
-
 ---
 
 ## 🏗️ Technical Architecture

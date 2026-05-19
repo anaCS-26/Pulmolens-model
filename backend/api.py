@@ -3,8 +3,7 @@ import numpy as np
 import torch
 import cv2
 import base64
-import binascii
-from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter, Header
+from fastapi import FastAPI, UploadFile, File, HTTPException, APIRouter
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -17,7 +16,7 @@ import uuid
 import json
 import requests
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import Dict
 from dotenv import load_dotenv
 
 # --- INITIALIZATION: Load environment before any cloud clients ---
@@ -43,20 +42,6 @@ Image.MAX_IMAGE_PIXELS = int(os.getenv("MAX_IMAGE_PIXELS", "40000000"))
 RAG_ENABLED = os.getenv("RAG_ENABLED", "true").strip().lower() == "true"
 RAG_MIN_TOP_PROB = float(os.getenv("RAG_MIN_TOP_PROB", "0.5"))
 ALLOW_UNSAFE_MODEL_DESERIALIZATION = os.getenv("ALLOW_UNSAFE_MODEL_DESERIALIZATION", "false").strip().lower() == "true"
-MCP_API_KEY = os.getenv("MCP_API_KEY")
-
-# --- MCP: Model Context Protocol Tool Interface ---
-MCP_TOOL_DEFINITION = {
-    "name": "analyze_chest_xray",
-    "description": "Analyze a chest X-Ray for 14 pathologies (Pneumonia, etc) using a RAG-grounded PyTorch model.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "image_b64": {"type": "string", "description": "Base64 encoded CXR image string"}
-        },
-        "required": ["image_b64"]
-    }
-}
 
 app = FastAPI(title="PulmoLens API", description="AI-Assisted Radiographic Guidance API", version=API_VERSION)
 
@@ -504,45 +489,6 @@ STRUCTURE YOUR RESPONSE AS:
             yield json.dumps({"report": f"\nError during generation: {str(e)}"}) + "\n"
 
     return StreamingResponse(report_generator(), media_type="application/x-ndjson")
-
-# --- MCP ENDPOINTS: Enabling Claude/Desktop tool use ---
-@app.get("/mcp/tools")
-async def get_mcp_tools():
-    """List available tools for Model Context Protocol hosts"""
-    return {"tools": [MCP_TOOL_DEFINITION]}
-
-@app.post("/mcp/analyze")
-async def mcp_analyze(request: dict, x_api_key: Optional[str] = Header(default=None, alias="x-api-key")):
-    """Execute analysis via MCP protocol"""
-    try:
-        if MCP_API_KEY and x_api_key != MCP_API_KEY:
-            raise HTTPException(status_code=401, detail="Unauthorized MCP request")
-
-        image_b64 = request.get("image_b64")
-        if not image_b64: return {"error": "No image_b64 found"}
-        
-        # Decode and wrap in mock UploadFile
-        try:
-            img_bytes = base64.b64decode(image_b64, validate=True)
-        except (binascii.Error, ValueError):
-            return {"error": "Invalid base64 image payload"}
-
-        _read_and_validate_upload(img_bytes, "image/jpeg")
-        from fastapi import UploadFile
-        import io
-        mock_file = UploadFile(filename="mcp_input.jpg", file=io.BytesIO(img_bytes))
-        
-        result = await predict(mock_file)
-        high_conf = [name for name, prob in result["predictions"].items() if prob > 0.5]
-        return {
-            "content": [
-                {"type": "text", "text": f"PulmoLens Analysis Result: {result['report']}"},
-                {"type": "text", "text": f"Findings summary: {', '.join(high_conf) if high_conf else 'No high-confidence findings'}"}
-            ]
-        }
-    except Exception as e:
-        logger.exception("MCP analyze failed: %s", e)
-        return {"error": "Analysis failed"}
 
 # Include router at root and /api
 app.include_router(router)
