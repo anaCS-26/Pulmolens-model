@@ -85,7 +85,7 @@ PulmoLens is an AI-assisted radiographic diagnostic pipeline that analyzes chest
 
 ### Frontend
 - **Environment Variables**: Production API URL is managed via `VITE_API_BASE_URL` in `.env.production`.
-- **Styling**: Uses Tailwind CSS with a Glassmorphism design system.
+- **Styling**: Tailwind CSS with an editorial "radiology report" system (paper, ink, one grease-pencil red accent, black film panels); Newsreader, IBM Plex Sans and IBM Plex Mono. Shared primitives live in `frontend/src/components/ui/`.
 - **Vite Configuration**: Do not hardcode the API base URL in `vite.config.ts`; keep it dynamic via environment variables.
 
 ### CI/CD

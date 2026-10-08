@@ -2,19 +2,18 @@ import React from "react";
 
 export function Footer() {
     return (
-        <footer className="mt-12 text-center text-xs text-slate-500 border-t border-slate-200 bg-white">
-            <div className="mx-auto max-w-6xl px-4 py-8">
-                <div className="font-medium text-slate-700 flex items-center justify-center gap-2">
-                    © {new Date().getFullYear()} PulmoLens · Portfolio prototype.
-                    {import.meta.env.VITE_DEMO_MODE === 'true' && (
-                        <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">Demo Mode Active</span>
-                    )}
+        <footer className="border-t border-ink print:hidden">
+            <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 px-6 py-10 md:grid-cols-12">
+                <div className="md:col-span-3">
+                    <div className="font-serif text-lg">PulmoLens</div>
+                    <div className="mt-1 font-mono text-[11px] text-ink-muted">© {new Date().getFullYear()} · Portfolio prototype</div>
                 </div>
-                <div className="mt-2 text-[11px] leading-relaxed max-w-3xl mx-auto text-slate-400">
-                    <strong>DISCLAIMER:</strong> This application is a technical demonstration of AI Engineering and RAG capabilities. It is not approved by the FDA or any regulatory body. 
-                    The predictions and generated reports are <strong>NOT medical advice</strong>, and must not be used for diagnostic or clinical decision-making. 
-                    Always consult a qualified healthcare professional.
-                </div>
+                <p className="max-w-3xl text-[13px] leading-relaxed text-ink-muted md:col-span-9">
+                    <span className="font-medium text-ink">Disclaimer.</span> This application is a technical demonstration of
+                    AI engineering and RAG capabilities. It is not approved by the FDA or any regulatory body. The predictions and
+                    generated reports are <span className="font-medium text-ink">not medical advice</span>, and must not be used for
+                    diagnostic or clinical decision-making. Always consult a qualified healthcare professional.
+                </p>
             </div>
         </footer>
     );

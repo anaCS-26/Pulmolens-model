@@ -52,7 +52,7 @@ export const ThinkingLoader: React.FC = () => {
   }, []);
 
   return (
-    <div className="inline-flex items-center gap-3 py-1.5 px-3 bg-white/80 backdrop-blur-xl rounded-lg border border-slate-200 shadow-sm animate-in fade-in duration-500">
+    <div className="inline-flex items-center gap-3">
       <svg
         viewBox="0 0 64 18"
         className="h-4 w-[52px] shrink-0 overflow-visible"
@@ -65,50 +65,29 @@ export const ThinkingLoader: React.FC = () => {
           strokeWidth="1.2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="text-slate-200"
+          className="text-rule-strong"
         />
         <path
           d={EKG_PATH}
           pathLength={100}
           fill="none"
-          stroke="rgb(79 70 229)"
-          strokeWidth="1.8"
+          stroke="#c2401c"
+          strokeWidth="1.6"
           strokeLinecap="round"
           strokeLinejoin="round"
           className="ekg-sweep"
         />
       </svg>
 
-      <div className="flex flex-col gap-0.5 leading-none">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-indigo-600">
-            AI
-          </span>
-          <span className="text-sm font-medium text-slate-800 tracking-tight">
-            Generating analysis
-          </span>
-        </div>
-        <h3
+      <div className="flex items-baseline gap-2 font-mono text-[12px] text-ink-muted">
+        <span className="text-ink">Drafting synthesis</span>
+        <span
           key={verbIndex}
-          className="text-[11px] font-normal text-slate-500 tracking-tight"
           aria-live="polite"
         >
-          <CharacterAnimator text={MEDICAL_VERBS[verbIndex]} />
-        </h3>
+          <CharacterAnimator text={MEDICAL_VERBS[verbIndex].toLowerCase()} />
+        </span>
       </div>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes ekg-sweep {
-          0%   { stroke-dashoffset: 14; }
-          100% { stroke-dashoffset: -100; }
-        }
-        .ekg-sweep {
-          stroke-dasharray: 14 100;
-          stroke-dashoffset: 14;
-          filter: drop-shadow(0 0 2.5px rgba(99, 102, 241, 0.85));
-          animation: ekg-sweep 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
-        }
-      `}} />
     </div>
   );
 };

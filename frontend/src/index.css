@@ -2,23 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root { height: 100%; }
+html, body, #root { min-height: 100%; }
+
+html { color-scheme: light; }
 
 body {
-  font-feature-settings: "cv11", "ss01", "ss03";
+  @apply bg-paper text-ink font-sans text-[15px] leading-normal;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "kern", "liga";
+}
+
+::selection { background: #1b1a17; color: #f2efe8; }
+
+:focus-visible { outline: 2px solid #c2401c; outline-offset: 2px; }
+
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
+
+@layer components {
+  /* Small uppercase mono label: section names, column headers, figure tags. */
+  .label {
+    @apply font-mono text-[11px] uppercase tracking-[0.08em] text-ink-muted;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+  /* Body links: ink with a thin offset underline that firms up on hover. */
+  .link {
+    @apply underline decoration-ink/30 underline-offset-[3px] decoration-1 transition-colors hover:decoration-ink;
+  }
+  /* PACS-style corner annotations on film panels. */
+  .film-text {
+    @apply font-mono text-[10.5px] uppercase leading-[1.35] tracking-[0.04em] text-white/80;
+    text-shadow: 0 0 2px #000, 0 0 4px #000, 0 0 1px #000;
+  }
+}
+
+/* Range input: a hairline track with a square thumb. */
+input[type="range"].range {
+  -webkit-appearance: none; appearance: none;
+  height: 2px; cursor: pointer; background: transparent;
+  background-image: linear-gradient(to right, currentColor var(--fill, 50%), rgba(127,127,127,0.35) var(--fill, 50%));
+}
+input[type="range"].range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  height: 14px; width: 8px; border-radius: 1px; background: currentColor;
+}
+input[type="range"].range::-moz-range-thumb {
+  height: 14px; width: 8px; border: 0; border-radius: 1px; background: currentColor;
 }
 
 /* Shared character-reveal animation used by the thinking loader and the
    streamed clinical synthesis. Each char animates exactly once on mount. */
 @keyframes char-fade-up {
-  0%   { opacity: 0; transform: translateY(6px); filter: blur(1.5px); }
-  100% { opacity: 1; transform: translateY(0);   filter: blur(0); }
+  0%   { opacity: 0; transform: translateY(3px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 .char-fade-up {
   display: inline-block;
-  animation: char-fade-up 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: char-fade-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 @keyframes caret-blink {
@@ -27,3 +68,36 @@ body {
 }
 .animate-caret-blink { animation: caret-blink 1s steps(1) infinite; }
 
+/* EKG trace used by the thinking loader. */
+@keyframes ekg-sweep {
+  0%   { stroke-dashoffset: 14; }
+  100% { stroke-dashoffset: -100; }
+}
+.ekg-sweep {
+  stroke-dasharray: 14 100;
+  stroke-dashoffset: 14;
+  animation: ekg-sweep 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+/* A single line travelling down a film panel while the model runs. */
+@keyframes scanline {
+  0%   { top: 0%; opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+.scanline { animation: scanline 2.6s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  @page { margin: 16mm; }
+  html, body { background: #fff !important; color: #111 !important; }
+}

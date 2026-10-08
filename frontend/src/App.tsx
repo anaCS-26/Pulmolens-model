@@ -1,17 +1,16 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import { uploadAndAnalyze, summarizeAIStream } from "./api";
 import { LABELS, CLINICIAN_COPY, GUIDELINE_TAGS, THRESHOLDS } from "./data/constants";
-import { Step } from "./types";
+import { Prediction, Step } from "./types";
 
 // Layout
 import { Header } from "./components/layout/Header";
 import { Footer } from "./components/layout/Footer";
-import { Stepper } from "./components/layout/Stepper";
 
 // Pages
 import { Landing } from "./pages/Landing";
 import { About } from "./pages/About";
-import { Consent } from "./pages/Consent";
 import { UploadPanel } from "./pages/UploadPanel";
 import { Processing } from "./pages/Processing";
 import { Results } from "./pages/Results";
@@ -26,49 +25,50 @@ function runDevChecks() {
   if (msgs.length) console.warn("[PulmoLens DevCheck]", msgs);
 }
 
+const CONSENT_KEY = "pulmolens.consent";
+
 export default function App() {
   const [step, setStep] = useState<Step>("landing");
-  const [agreed, setAgreed] = useState(false);
+  // Consent lasts for the browser session so a second analysis doesn't re-ask.
+  const [agreed, setAgreedState] = useState(() => sessionStorage.getItem(CONSENT_KEY) === "1");
+  const setAgreed = (v: boolean) => {
+    setAgreedState(v);
+    if (v) sessionStorage.setItem(CONSENT_KEY, "1");
+    else sessionStorage.removeItem(CONSENT_KEY);
+  };
   const [file, setFile] = useState<File | null>(null);
   const [imageURL, setImageURL] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [heatmapOpacity, setHeatmapOpacity] = useState<number>(0.5);
   const [attentionOverlay, setAttentionOverlay] = useState<string | null>(null);
-  const [imageId, setImageId] = useState<string | null>(null);
   const [report, setReport] = useState<string | null>(null);
   const [sources, setSources] = useState<string[]>([]);
-
-  const [showPatientSheet, setShowPatientSheet] = useState(false);
 
   // server inference state
   const [serverPreds, setServerPreds] = useState<Record<string, number> | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  useEffect(() => { 
-    runDevChecks(); 
+  // Each analysis gets an id so a stale request or stream can't write into a newer one.
+  const runId = useRef(0);
+  const stepRef = useRef(step);
+  stepRef.current = step;
+
+  useEffect(() => {
+    runDevChecks();
     // Warmup the backend as soon as the app loads to mitigate cold starts
     import("./api").then(({ warmup }) => warmup());
   }, []);
 
-  // predictions: ONLY from server
-  const predictions = useMemo(() => {
-    if (!serverPreds) return [] as { label: string; prob: number }[];
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }, [step]);
+
+  // predictions: ONLY from server, each paired with the threshold it is judged against.
+  const predictions = useMemo<Prediction[]>(() => {
+    if (!serverPreds) return [];
     return Object.entries(serverPreds)
-      .map(([label, prob]) => ({ label, prob }))
+      .map(([label, prob]) => ({ label, prob, threshold: THRESHOLDS[label] || 0.5 }))
       .sort((a, b) => b.prob - a.prob);
   }, [serverPreds]);
-
-  // faux progress bar while waiting for server
-  useEffect(() => {
-    if (step !== "processing") return;
-    setProgress(5);
-    const id = setInterval(() => {
-      setProgress((p) => Math.min(p + Math.random() * 22, 95));
-    }, 500);
-    return () => clearInterval(id);
-  }, [step]);
 
   // image preview
   useEffect(() => {
@@ -78,107 +78,109 @@ export default function App() {
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  const filtered = useMemo(
-    () => predictions.filter((p) => p.label.toLowerCase().includes(searchTerm.toLowerCase())),
-    [predictions, searchTerm]
-  );
-  const actionable = filtered.filter((p) => p.prob >= (THRESHOLDS[p.label] || 0.5));
-
   // upload & start inference
   const handleFile = async (f: File) => {
+    const id = ++runId.current;
+    const current = () => id === runId.current;
+
     setFile(f);
     setServerPreds(null);
+    setAttentionOverlay(null);
+    setReport(null);
+    setSources([]);
     setErrorMsg(null);
+    setIsSummarizing(false);
     setStep("processing");
     try {
-      const { predictions, attentionOverlay, imageId } = await uploadAndAnalyze(f);
+      const { predictions, attentionOverlay } = await uploadAndAnalyze(f);
+      if (!current()) return;
 
       setServerPreds(predictions || null);
       setAttentionOverlay(attentionOverlay || null);
-      setImageId(imageId || null);
-      setProgress(100);
-      setStep("results");
+      // Don't yank the user back if they navigated away while waiting.
+      if (stepRef.current === "processing") setStep("results");
 
       // Stage 2: Trigger AI Summarization in the background
       if (predictions && attentionOverlay) {
         setIsSummarizing(true);
         setReport(""); // Clear previous report for streaming
-        setSources([]);
         try {
           await summarizeAIStream(
             predictions,
             attentionOverlay,
-            (chunk) => setReport(prev => (prev || "") + chunk),
-            (sources) => setSources(sources)
+            (chunk) => current() && setReport((prev) => (prev || "") + chunk),
+            (sources) => current() && setSources(sources)
           );
         } catch (summErr) {
           console.error("Summarization background task failed:", summErr);
         } finally {
-          setIsSummarizing(false);
+          if (current()) setIsSummarizing(false);
         }
       }
     } catch (e: any) {
+      if (!current()) return;
       console.error(e);
       setErrorMsg(`Upload failed: ${e?.message || e}`);
-      setStep("results");
+      if (stepRef.current === "processing") setStep("results");
     }
   };
 
+  const restart = () => {
+    runId.current++;
+    setFile(null);
+    setImageURL(null);
+    setServerPreds(null);
+    setAttentionOverlay(null);
+    setReport(null);
+    setSources([]);
+    setErrorMsg(null);
+    setIsSummarizing(false);
+    setStep("upload");
+  };
+
+  const hasResults = !!serverPreds || !!errorMsg;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900">
-      <Header step={step} setStep={setStep} agreed={agreed} hasFile={!!file} />
-      <main className="mx-auto max-w-6xl px-4 pb-24">
-        <Stepper step={step} setStep={setStep} agreed={agreed} hasFile={!!file} />
-        {step === "landing" && (
-          <Landing onStart={() => setStep("consent")} onLearnMore={() => setStep("about")} />
-        )}
-        {step === "about" && <About onBack={() => setStep("landing")} />}
-        {step === "consent" && (
-          <Consent
-            agreed={agreed}
-            setAgreed={setAgreed}
-            onContinue={() => setStep("upload")}
-            onBack={() => setStep("landing")}
-          />
-        )}
-        {step === "upload" && <UploadPanel onFile={handleFile} onBack={() => setStep("consent")} />}
-        {step === "processing" && <Processing progress={progress} />}
-        {step === "results" && (
-          <ErrorBoundary>
-            <Results
-              file={file}
-              imageURL={imageURL}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              predictions={filtered}
-              actionable={actionable}
-              heatmapOpacity={heatmapOpacity}
-              setHeatmapOpacity={setHeatmapOpacity}
-              onRestart={() => {
-                setFile(null);
-                setImageURL(null);
-                setServerPreds(null);
-                setAttentionOverlay(null);
-                setImageId(null);
-                setReport(null);
-                setSources([]);
-                setErrorMsg(null);
-                setStep("upload");
-              }}
-              showPatientSheet={showPatientSheet}
-              setShowPatientSheet={setShowPatientSheet}
-              errorMsg={errorMsg}
-              attentionOverlay={attentionOverlay}
-              imageId={imageId}
-              report={report}
-              sources={sources}
-              isSummarizing={isSummarizing}
-            />
-          </ErrorBoundary>
-        )}
-      </main>
-      <Footer />
-    </div>
+    <MotionConfig reducedMotion="user">
+      <div className="relative min-h-screen overflow-x-clip print:hidden">
+        <Header step={step} setStep={setStep} hasResults={hasResults} />
+        <main className="relative min-h-[calc(100vh-180px)]">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={step}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+            >
+              {step === "landing" && (
+                <Landing onStart={() => setStep("upload")} onLearnMore={() => setStep("about")} />
+              )}
+              {step === "about" && <About onBack={() => setStep("landing")} onStart={() => setStep("upload")} />}
+              {step === "upload" && <UploadPanel agreed={agreed} onAgree={setAgreed} onFile={handleFile} />}
+              {step === "processing" && <Processing imageURL={imageURL} fileName={file?.name} />}
+              {step === "results" && (
+                <ErrorBoundary>
+                  <Results
+                    file={file}
+                    imageURL={imageURL}
+                    predictions={predictions}
+                    onRestart={restart}
+                    onRetry={() => file && handleFile(file)}
+                    errorMsg={errorMsg}
+                    attentionOverlay={attentionOverlay}
+                    report={report}
+                    sources={sources}
+                    isSummarizing={isSummarizing}
+                  />
+                </ErrorBoundary>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+        <Footer />
+      </div>
+    </MotionConfig>
   );
 }
 
@@ -194,10 +196,10 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   render() {
     if (this.state.hasError) {
       return (
-        <div className="p-8 bg-rose-50 border border-rose-200 rounded-3xl text-rose-900">
-          <h2 className="text-xl font-bold">App Rendering Error</h2>
-          <pre className="mt-4 text-xs overflow-auto">{this.state.error?.toString()}</pre>
-          <button onClick={() => window.location.reload()} className="mt-4 bg-rose-900 text-white px-4 py-2 rounded-xl">Reload Page</button>
+        <div className="mx-auto mt-16 max-w-2xl border-l-2 border-marker px-6 py-4">
+          <h2 className="font-serif text-2xl">App Rendering Error</h2>
+          <pre className="mt-4 overflow-auto font-mono text-xs text-marker-dark">{this.state.error?.toString()}</pre>
+          <button onClick={() => window.location.reload()} className="mt-5 rounded bg-ink px-4 py-2 text-sm font-medium text-paper">Reload Page</button>
         </div>
       );
     }

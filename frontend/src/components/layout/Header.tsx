@@ -1,53 +1,57 @@
 import React from "react";
-import { Stethoscope } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { Step } from "../../types";
+import { Logo } from "../ui/Logo";
 
 interface HeaderProps {
     step: Step;
     setStep: (s: Step) => void;
-    agreed: boolean;
-    hasFile: boolean;
+    hasResults: boolean;
 }
 
-export function Header({ step, setStep, agreed, hasFile }: HeaderProps) {
-    const NavBtn = ({ id, label, disabled }: { id: Step; label: string; disabled?: boolean }) => (
-        <button
-            onClick={() => !disabled && setStep(id)}
-            disabled={disabled}
-            className={cn(
-                "text-sm px-3 py-1.5 rounded-lg border transition-colors",
-                step === id
-                    ? "bg-slate-900 text-white border-slate-900"
-                    : disabled
-                        ? "bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed"
-                        : "bg-white border-slate-300 hover:bg-slate-50"
-            )}
-        >
-            {label}
-        </button>
-    );
+const IS_DEMO = import.meta.env.VITE_DEMO_MODE === "true";
+
+export function Header({ step, setStep, hasResults }: HeaderProps) {
+    // "Analyse" covers the whole upload -> processing hand-off.
+    const activeId: Step = step === "processing" ? "upload" : step;
+    const items: { id: Step; label: string; disabled?: boolean }[] = [
+        { id: "landing", label: "Overview" },
+        { id: "about", label: "About" },
+        { id: "upload", label: "Analyse" },
+        { id: "results", label: "Report", disabled: !hasResults },
+    ];
 
     return (
-        <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b border-slate-200">
-            <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow">
-                        <Stethoscope className="h-6 w-6" />
-                    </div>
-                    <div>
-                        <div className="text-xl font-semibold tracking-tight">PulmoLens</div>
-                        <div className="text-xs text-slate-500">
-                            AI-assisted chest X-ray guidance {import.meta.env.VITE_DEMO_MODE === 'true' ? "(mock mode)" : "(demo)"}
-                        </div>
-                    </div>
-                </div>
-                <nav className="flex items-center gap-2">
-                    <NavBtn id="landing" label="Home" />
-                    <NavBtn id="about" label="About" />
-                    <NavBtn id="upload" label="Upload" disabled={!agreed} />
-                    <NavBtn id="results" label="Results" disabled={!hasFile} />
+        <header className="sticky top-0 z-40 border-b border-rule bg-paper/95 backdrop-blur-[2px] print:hidden">
+            <div className="mx-auto flex h-14 max-w-[1200px] items-center gap-10 px-6">
+                <Logo onClick={() => setStep("landing")} />
+                <nav className="flex items-center gap-6 self-stretch" aria-label="Primary">
+                    {items.map((it) => {
+                        const active = activeId === it.id;
+                        return (
+                            <button
+                                key={it.id}
+                                disabled={it.disabled}
+                                onClick={() => setStep(it.id)}
+                                aria-current={active ? "page" : undefined}
+                                className={cn(
+                                    "relative h-full text-[13.5px] transition-colors",
+                                    it.id !== "upload" && it.id !== "results" && "hidden sm:block",
+                                    active ? "text-ink font-medium" : "text-ink-muted hover:text-ink",
+                                    "disabled:cursor-not-allowed disabled:text-ink-faint/60",
+                                    "after:absolute after:inset-x-0 after:bottom-[-1px] after:h-[2px] after:bg-ink",
+                                    active ? "after:block" : "after:hidden"
+                                )}
+                            >
+                                {it.label}
+                            </button>
+                        );
+                    })}
                 </nav>
+                <div className="ml-auto hidden items-center gap-3 md:flex">
+                    {IS_DEMO && <span className="label !text-marker">Mock mode</span>}
+                    <span className="label">Research prototype · not for clinical use</span>
+                </div>
             </div>
         </header>
     );
