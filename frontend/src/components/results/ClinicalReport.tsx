@@ -48,7 +48,7 @@ function useTypewriter(target: string, baseCps = 70): string {
 // changed, so each char animates exactly once on first mount.
 function AnimatedChars({ text, start, bold, tailStart }: { text: string; start: number; bold?: boolean; tailStart: number }) {
     const Wrap = bold ? 'strong' : 'span';
-    const wrapClass = bold ? "font-semibold text-ink" : undefined;
+    const wrapClass = bold ? "font-semibold text-fg" : undefined;
     const splitAt = Math.max(0, Math.min(text.length, tailStart - start));
     const settled = text.slice(0, splitAt);
     const tail = text.slice(splitAt);
@@ -120,13 +120,13 @@ function MarkdownLite({ text, isStreaming }: { text: string; isStreaming?: boole
                 });
 
                 const caret = stillTyping && isLast ? (
-                    <span className="inline-block w-[2px] h-[1em] bg-marker ml-0.5 align-[-0.15em] animate-caret-blink" />
+                    <span className="inline-block w-[2px] h-[1em] bg-accent ml-0.5 align-[-0.15em] animate-caret-blink" />
                 ) : null;
 
                 if (isBullet) {
                     return (
                         <div key={`b-${lineStart}`} className="flex items-start gap-2.5 pl-1">
-                            <span className="mt-0 shrink-0 font-sans text-ink-faint">–</span>
+                            <span className="mt-0 shrink-0 text-fg-faint">–</span>
                             <div>{rendered}{caret}</div>
                         </div>
                     );
@@ -151,15 +151,15 @@ export function ClinicalReport({ report, sources, isSummarizing, hasOverlay }: C
         return (
             <div className="py-2">
                 <ThinkingLoader />
-                <p className="mt-3 max-w-[48ch] text-[13.5px] text-ink-muted">Retrieving guidance and drafting a synthesis. The findings above are ready to review meanwhile.</p>
+                <p className="mt-3 max-w-[48ch] text-[13.5px] text-fg-muted">Retrieving guidance and drafting a summary. The findings are ready to review meanwhile.</p>
             </div>
         );
     }
 
     if (!hasText) {
         return (
-            <p className="text-[14.5px] text-ink-muted">
-                No synthesis was generated for this image.{" "}
+            <p className="text-[14.5px] text-fg-muted">
+                No summary was generated for this image.{" "}
                 {hasOverlay ? "The summarisation service didn't return a report." : "A synthesis needs the attention overlay, which wasn't returned."}
             </p>
         );
@@ -167,15 +167,15 @@ export function ClinicalReport({ report, sources, isSummarizing, hasOverlay }: C
 
     return (
         <div>
-            <div className="max-w-[62ch] font-serif text-[18px] leading-[1.65] text-ink">
+            <div className="max-w-[66ch] text-[16px] leading-[1.7] text-fg-soft">
                 <MarkdownLite text={report} isStreaming={isSummarizing} />
             </div>
 
             {sources.length > 0 && (
-                <ol className="mt-6 space-y-1 border-t border-rule pt-3 text-[13px] leading-snug text-ink-muted">
+                <ol className="mt-6 space-y-1.5 border-t border-line pt-4 text-[13px] leading-snug text-fg-muted">
                     {sources.map((s, idx) => (
                         <li key={idx} className="grid grid-cols-[1.5rem_1fr]">
-                            <span className="font-mono text-marker">{idx + 1}</span>
+                            <span className="num font-medium text-accent-ink">{idx + 1}</span>
                             <span>{s}</span>
                         </li>
                     ))}

@@ -68,7 +68,7 @@ export function Lightbox({ title, imageURL, overlay, opacity, setOpacity, onClos
         return () => el.removeEventListener("wheel", onWheel);
     }, [zoomAt]);
 
-    const ctl = "font-mono text-[12px] text-white/60 transition-colors hover:text-white disabled:opacity-30 disabled:hover:text-white/60";
+    const ctl = "text-[13px] text-white/60 transition-colors hover:text-white disabled:opacity-30 disabled:hover:text-white/60";
 
     return createPortal(
         <motion.div
@@ -81,11 +81,11 @@ export function Lightbox({ title, imageURL, overlay, opacity, setOpacity, onClos
             aria-modal="true"
             aria-label="Fullscreen X-ray viewer"
         >
-            <div className="flex items-center justify-between gap-4 border-b border-white/15 px-5 py-3">
+            <div className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-3">
                 <div className="film-text min-w-0 truncate !text-[11px]">{title}</div>
                 <div className="flex items-center gap-5">
                     <button onClick={() => zoomAt(0.8)} disabled={view.s <= MIN} className={ctl} aria-label="Zoom out">−</button>
-                    <span className="num w-12 text-center font-mono text-[12px] text-white">{Math.round(view.s * 100)}%</span>
+                    <span className="num w-12 text-center text-[13px] text-white">{Math.round(view.s * 100)}%</span>
                     <button onClick={() => zoomAt(1.25)} disabled={view.s >= MAX} className={ctl} aria-label="Zoom in">+</button>
                     <button onClick={reset} className={ctl} title="Reset (0)">Reset</button>
                     {overlay && (
@@ -127,8 +127,8 @@ export function Lightbox({ title, imageURL, overlay, opacity, setOpacity, onClos
                 </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/15 px-5 py-3">
-                <div className="hidden gap-5 font-mono text-[11px] text-white/40 sm:flex">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 px-5 py-3">
+                <div className="hidden gap-5 text-[12px] text-white/45 sm:flex">
                     <span>Scroll: zoom</span><span>Drag: pan</span><span>Double-click: 2.5×</span>{overlay && <span>O: overlay</span>}<span>Esc: close</span>
                 </div>
                 {overlay && showOverlay && <OpacitySlider tone="film" value={opacity} onChange={setOpacity} className="w-full max-w-xs" />}

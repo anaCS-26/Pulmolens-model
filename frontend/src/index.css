@@ -4,78 +4,89 @@
 
 html, body, #root { min-height: 100%; }
 
-/* Light: warm paper and ink. Dark: a dim reading room, still warm, never blue-black. */
+/* Light: a lightbox, cool white. Dark: a reading room, film-base blue-black.
+   Amber is the secondary colour and the colour of a score above its cutoff;
+   red is kept for urgent safety messages. Film panels are black in both. */
 :root {
   color-scheme: light;
-  --paper: 242 239 232;  --paper-raised: 248 246 241;  --paper-sunk: 232 228 218;
-  --ink: 27 26 23;       --ink-soft: 58 56 50;         --ink-muted: 108 104 94;  --ink-faint: 155 150 138;
-  --rule: 213 208 196;   --rule-strong: 185 179 165;
-  --marker: 194 64 28;   --marker-dark: 158 50 21;     --marker-soft: 241 221 211;
+  --surface: 241 244 246;  --surface-raised: 255 255 255;  --surface-sunk: 232 237 240;
+  --fg: 15 20 23;          --fg-soft: 60 70 77;            --fg-muted: 93 104 112;   --fg-faint: 124 134 142;
+  --line: 214 221 226;     --line-soft: 228 233 236;
+  --solid: 15 20 23;       --solid-fg: 241 244 246;
+  --bar: 195 204 210;
+  --accent: 224 138 18;    --accent-ink: 168 95 0;
+  --urgent: 211 48 31;
 }
 .dark {
   color-scheme: dark;
-  --paper: 22 21 19;     --paper-raised: 30 29 26;     --paper-sunk: 42 40 36;
-  --ink: 235 231 222;    --ink-soft: 205 200 190;      --ink-muted: 152 147 137; --ink-faint: 106 102 94;
-  --rule: 54 52 47;      --rule-strong: 78 75 68;
-  --marker: 234 110 72;  --marker-dark: 242 142 110;   --marker-soft: 60 33 25;
+  --surface: 11 15 18;     --surface-raised: 17 23 27;     --surface-sunk: 23 32 38;
+  --fg: 227 233 237;       --fg-soft: 184 196 203;         --fg-muted: 138 153 164;  --fg-faint: 100 114 124;
+  --line: 34 48 58;        --line-soft: 26 36 43;
+  --solid: 223 233 239;    --solid-fg: 11 15 18;
+  --bar: 58 72 82;
+  --accent: 242 162 58;    --accent-ink: 245 178 78;
+  --urgent: 255 90 69;
 }
 
 body {
-  @apply bg-paper text-ink font-sans text-[15px] leading-normal;
+  @apply bg-surface text-fg font-sans text-[15.5px] leading-normal;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: "kern", "liga";
+  transition: background-color 0.25s, color 0.25s;
 }
 
-::selection { background: rgb(var(--ink)); color: rgb(var(--paper)); }
+::selection { background: rgb(var(--accent) / 0.35); }
 
-:focus-visible { outline: 2px solid rgb(var(--marker)); outline-offset: 2px; }
+:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 3px; border-radius: 4px; }
 
 h1, h2, h3 { text-wrap: balance; }
 p { text-wrap: pretty; }
 
 @layer components {
-  /* Small uppercase mono label: section names, column headers, figure tags. */
-  .label {
-    @apply font-mono text-[11px] uppercase tracking-[0.08em] text-ink-muted;
+  /* Display type: Mona Sans at an expanded width, tightly tracked. */
+  .display {
+    font-stretch: 116%;
+    font-weight: 600;
+    letter-spacing: -0.035em;
+  }
+  /* Small amber line above a section heading. */
+  .kicker {
+    @apply text-[14px] font-medium text-accent-ink;
   }
   .num { font-variant-numeric: tabular-nums; }
-  /* Body links: ink with a thin offset underline that firms up on hover. */
   .link {
-    @apply underline decoration-ink/30 underline-offset-[3px] decoration-1 transition-colors hover:decoration-ink;
+    @apply underline decoration-fg/25 underline-offset-[3px] decoration-1 transition-colors hover:decoration-accent;
   }
-  /* PACS-style corner annotations on film panels. */
+  /* PACS-style annotations burned onto film panels. White on black in both themes. */
   .film-text {
-    @apply font-mono text-[10.5px] uppercase leading-[1.35] tracking-[0.04em] text-white/80;
-    text-shadow: 0 0 2px #000, 0 0 4px #000, 0 0 1px #000;
+    @apply font-mono text-[10.5px] uppercase leading-[1.45] tracking-[0.04em] text-white/85;
+    font-stretch: 80%;
+    text-shadow: 0 0 3px #000, 0 0 1px #000;
   }
 }
 
-/* Range input: a hairline track with a square thumb. */
+/* Range input: a thin track with a round thumb. */
 input[type="range"].range {
   -webkit-appearance: none; appearance: none;
-  height: 2px; cursor: pointer; background: transparent;
-  background-image: linear-gradient(to right, currentColor var(--fill, 50%), rgba(127,127,127,0.35) var(--fill, 50%));
+  height: 3px; border-radius: 2px; cursor: pointer; background: transparent;
+  background-image: linear-gradient(to right, currentColor var(--fill, 50%), rgba(127,127,127,0.3) var(--fill, 50%));
 }
 input[type="range"].range::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
-  height: 14px; width: 8px; border-radius: 1px; background: currentColor;
+  height: 14px; width: 14px; border-radius: 50%; background: currentColor;
 }
 input[type="range"].range::-moz-range-thumb {
-  height: 14px; width: 8px; border: 0; border-radius: 1px; background: currentColor;
+  height: 14px; width: 14px; border: 0; border-radius: 50%; background: currentColor;
 }
 
 /* Shared character-reveal animation used by the thinking loader and the
-   streamed clinical synthesis. Each char animates exactly once on mount.
-   Opacity only, on plain inline spans: inline-block chars create a line-break
-   opportunity between every letter, which split words mid-stream. */
+   streamed clinical synthesis. Opacity only, on plain inline spans:
+   inline-block chars create a line-break opportunity between every letter. */
 @keyframes char-fade-up {
   0%   { opacity: 0; }
   100% { opacity: 1; }
 }
-.char-fade-up {
-  animation: char-fade-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
+.char-fade-up { animation: char-fade-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 
 @keyframes caret-blink {
   0%, 50%      { opacity: 1; }
@@ -103,9 +114,45 @@ input[type="range"].range::-moz-range-thumb {
 }
 .scanline { animation: scanline 2.6s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
 
+/* The hero film "develops": window and level settle from washed-out to read. */
+@keyframes develop {
+  from { filter: contrast(0.35) brightness(1.9) blur(2px); }
+  to   { filter: contrast(1.06) brightness(0.98) blur(0); }
+}
+.develop { animation: develop 1.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both; }
+
+/* The attention map wipes in from the top once the film has developed. */
+@keyframes map-sweep {
+  from { -webkit-mask-position: 0 100%; mask-position: 0 100%; }
+  to   { -webkit-mask-position: 0 0;    mask-position: 0 0; }
+}
+.map-sweep {
+  -webkit-mask-image: linear-gradient(180deg, #000 45%, transparent 55%);
+  mask-image: linear-gradient(180deg, #000 45%, transparent 55%);
+  -webkit-mask-size: 100% 220%; mask-size: 100% 220%;
+  animation: map-sweep 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) 1.5s both;
+}
+
+/* Leader lines on the hero film draw themselves in. */
+@keyframes draw-line { to { stroke-dashoffset: 0; } }
+.draw-line { stroke-dasharray: 400; stroke-dashoffset: 400; animation: draw-line 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.fade-in { animation: fade-in 0.5s both; }
+
+/* A dot travelling along the pipeline rule on the landing page. */
+@keyframes travel {
+  0%   { left: 0%; opacity: 0; }
+  6%   { opacity: 1; }
+  94%  { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+.travel { animation: travel 5.5s cubic-bezier(0.6, 0, 0.4, 1) infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
@@ -117,10 +164,11 @@ input[type="range"].range::-moz-range-thumb {
   /* Paper is always light, whatever the screen theme. */
   .dark {
     color-scheme: light;
-    --paper: 255 255 255;  --paper-raised: 248 246 241;  --paper-sunk: 232 228 218;
-    --ink: 17 17 17;       --ink-soft: 58 56 50;         --ink-muted: 108 104 94;  --ink-faint: 155 150 138;
-    --rule: 213 208 196;   --rule-strong: 185 179 165;
-    --marker: 194 64 28;   --marker-dark: 158 50 21;     --marker-soft: 241 221 211;
+    --surface: 255 255 255;  --surface-raised: 255 255 255;  --surface-sunk: 240 242 244;
+    --fg: 17 17 17;          --fg-soft: 60 70 77;            --fg-muted: 93 104 112;   --fg-faint: 124 134 142;
+    --line: 214 221 226;     --line-soft: 228 233 236;
+    --accent: 224 138 18;    --accent-ink: 168 95 0;
+    --urgent: 211 48 31;
   }
   html, body { background: #fff !important; color: #111 !important; }
 }

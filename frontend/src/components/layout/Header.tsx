@@ -1,4 +1,5 @@
 import React from "react";
+import { Moon, Sun } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { Step } from "../../types";
 import { Logo } from "../ui/Logo";
@@ -23,10 +24,10 @@ export function Header({ step, setStep, hasResults }: HeaderProps) {
     ];
 
     return (
-        <header className="sticky top-0 z-40 border-b border-rule bg-paper/95 backdrop-blur-[2px] print:hidden">
-            <div className="mx-auto flex h-14 max-w-[1200px] items-center gap-5 px-4 sm:gap-10 sm:px-6">
+        <header className="sticky top-0 z-40 border-b border-line bg-surface/85 backdrop-blur-md print:hidden">
+            <div className="mx-auto flex h-[60px] max-w-[1280px] items-center gap-6 px-4 sm:gap-10 sm:px-6 lg:px-10">
                 <Logo onClick={() => setStep("landing")} />
-                <nav className="flex items-center gap-4 self-stretch sm:gap-6" aria-label="Primary">
+                <nav className="flex items-center gap-5 self-stretch sm:gap-7" aria-label="Primary">
                     {items.map((it) => {
                         const active = activeId === it.id;
                         return (
@@ -36,11 +37,11 @@ export function Header({ step, setStep, hasResults }: HeaderProps) {
                                 onClick={() => setStep(it.id)}
                                 aria-current={active ? "page" : undefined}
                                 className={cn(
-                                    "relative h-full text-[13.5px] transition-colors",
+                                    "relative h-full text-[14px] transition-colors",
                                     it.id !== "upload" && it.id !== "results" && "hidden sm:block",
-                                    active ? "text-ink font-medium" : "text-ink-muted hover:text-ink",
-                                    "disabled:cursor-not-allowed disabled:text-ink-faint/60",
-                                    "after:absolute after:inset-x-0 after:bottom-[-1px] after:h-[2px] after:bg-ink",
+                                    active ? "text-fg" : "text-fg-muted hover:text-fg",
+                                    "disabled:cursor-not-allowed disabled:text-fg-faint/60",
+                                    "after:absolute after:inset-x-0 after:bottom-[-1px] after:h-[2px] after:rounded-full after:bg-accent",
                                     active ? "after:block" : "after:hidden"
                                 )}
                             >
@@ -49,11 +50,11 @@ export function Header({ step, setStep, hasResults }: HeaderProps) {
                         );
                     })}
                 </nav>
-                <div className="ml-auto flex shrink-0 items-center gap-6">
-                    <div className="hidden items-center gap-3 lg:flex">
-                        {IS_DEMO && <span className="label !text-marker">Mock mode</span>}
-                        <span className="label">Research prototype · not for clinical use</span>
-                    </div>
+                <div className="ml-auto flex shrink-0 items-center gap-3">
+                    {IS_DEMO && <span className="rounded-full border border-accent/50 px-2.5 py-1 text-[12px] text-accent-ink">Mock mode</span>}
+                    <span className="hidden rounded-full border border-line px-2.5 py-1 text-[12.5px] text-fg-muted lg:inline">
+                        Research prototype · not for clinical use
+                    </span>
                     <ThemeToggle />
                 </div>
             </div>
@@ -63,20 +64,24 @@ export function Header({ step, setStep, hasResults }: HeaderProps) {
 
 function ThemeToggle() {
     const [theme, setTheme] = useTheme();
-    const opt = (t: Theme, label: string) => (
+    const opt = (t: Theme, Icon: typeof Sun, label: string) => (
         <button
             onClick={() => setTheme(t)}
             aria-pressed={theme === t}
-            className={cn("transition-colors", theme === t ? "text-ink underline underline-offset-[5px]" : "text-ink-faint hover:text-ink")}
+            aria-label={label}
+            title={label}
+            className={cn(
+                "grid h-[26px] w-[30px] place-items-center rounded-full transition-colors",
+                theme === t ? "bg-surface-sunk text-fg" : "text-fg-muted hover:text-fg"
+            )}
         >
-            {label}
+            <Icon className="h-[15px] w-[15px]" strokeWidth={1.75} />
         </button>
     );
     return (
-        <div className="flex items-center gap-1.5 font-mono text-[11.5px]" role="group" aria-label="Colour theme">
-            {opt("light", "Light")}
-            <span className="text-ink-faint">/</span>
-            {opt("dark", "Dark")}
+        <div className="flex rounded-full border border-line p-[2px]" role="group" aria-label="Colour theme">
+            {opt("light", Sun, "Light theme")}
+            {opt("dark", Moon, "Dark theme")}
         </div>
     );
 }

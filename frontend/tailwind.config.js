@@ -13,22 +13,26 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        // Plex for the instrument, Newsreader for anything meant to be read.
-        sans: ['"IBM Plex Sans"', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', 'Arial', 'sans-serif'],
-        serif: ['Newsreader', 'ui-serif', 'Georgia', 'serif'],
-        mono: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
+        // Mona Sans for everything; Martian Mono only for annotations burned onto film.
+        sans: ['"Mona Sans"', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        mono: ['"Martian Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
       },
       colors: {
-        paper: { DEFAULT: v('paper'), raised: v('paper-raised'), sunk: v('paper-sunk') },
-        ink: { DEFAULT: v('ink'), soft: v('ink-soft'), muted: v('ink-muted'), faint: v('ink-faint') },
-        rule: { DEFAULT: v('rule'), strong: v('rule-strong') },
-        // The red of a radiologist's grease pencil: used only for flags and warnings.
-        marker: { DEFAULT: v('marker'), dark: v('marker-dark'), soft: v('marker-soft') },
+        surface: { DEFAULT: v('surface'), raised: v('surface-raised'), sunk: v('surface-sunk') },
+        fg: { DEFAULT: v('fg'), soft: v('fg-soft'), muted: v('fg-muted'), faint: v('fg-faint') },
+        line: { DEFAULT: v('line'), soft: v('line-soft') },
+        // High-contrast fill for primary buttons: ink on light, lightbox white on dark.
+        solid: { DEFAULT: v('solid'), fg: v('solid-fg') },
+        bar: v('bar'),
+        // Amber is the secondary colour, and the colour of a score above its cutoff.
+        accent: { DEFAULT: v('accent'), ink: v('accent-ink') },
+        // Red is reserved for urgent clinical safety messages.
+        urgent: v('urgent'),
         // Film panels stay black in both themes.
-        film: '#0c0c0b',
+        film: '#000000',
       },
       borderRadius: {
-        DEFAULT: '3px',
+        DEFAULT: '6px',
       },
     },
   },

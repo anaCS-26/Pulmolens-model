@@ -65,7 +65,7 @@ export const ThinkingLoader: React.FC = () => {
           strokeWidth="1.2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="text-rule-strong"
+          className="text-line"
         />
         <path
           d={EKG_PATH}
@@ -75,12 +75,12 @@ export const ThinkingLoader: React.FC = () => {
           strokeWidth="1.6"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="ekg-sweep text-marker"
+          className="ekg-sweep text-accent"
         />
       </svg>
 
-      <div className="flex items-baseline gap-2 font-mono text-[12px] text-ink-muted">
-        <span className="text-ink">Drafting synthesis</span>
+      <div className="flex items-baseline gap-2 text-[13.5px] text-fg-muted">
+        <span className="font-medium text-fg">Drafting summary</span>
         <span
           key={verbIndex}
           aria-live="polite"

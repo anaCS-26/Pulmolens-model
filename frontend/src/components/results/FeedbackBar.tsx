@@ -26,14 +26,14 @@ export function FeedbackBar({ onSubmit, disabled }: FeedbackBarProps) {
     };
 
     if (state === "sent") {
-        return <p className="text-[14px] text-ink-soft">Thank you for your feedback! It helps us improve.</p>;
+        return <p className="text-[14px] text-fg-soft">Thanks. Your feedback was sent to the team.</p>;
     }
 
     const opt = (r: Rating, label: string) => (
         <button
             onClick={() => send(r)}
             disabled={disabled || state === "sending"}
-            className={cn("link text-[14px] disabled:opacity-40", state === "sending" && rating === r && "text-ink-muted")}
+            className={cn("rounded-lg border border-line px-3 py-1.5 text-[13.5px] transition-colors hover:bg-surface-sunk disabled:opacity-40", state === "sending" && rating === r && "text-fg-muted")}
         >
             {state === "sending" && rating === r ? "Sending…" : label}
         </button>
@@ -41,12 +41,12 @@ export function FeedbackBar({ onSubmit, disabled }: FeedbackBarProps) {
 
     return (
         <div>
-            <div className="flex flex-wrap items-baseline gap-x-5 gap-y-2">
-                <span className="text-[14px] font-medium">Was this analysis helpful?</span>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <span className="mr-2 text-[14px] font-medium">Was this analysis helpful?</span>
                 {opt("good", "Yes, helpful")}
                 {opt("bad", "No, not accurate")}
             </div>
-            <p className={cn("mt-1 text-[12.5px]", state === "error" ? "text-marker" : "text-ink-muted")}>
+            <p className={cn("mt-2 text-[12.5px]", state === "error" ? "text-urgent" : "text-fg-muted")}>
                 {state === "error" ? "Couldn't send feedback. Please try again." : "Sending feedback shares this image and its scores with the team."}
             </p>
         </div>

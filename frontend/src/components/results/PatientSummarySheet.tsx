@@ -29,10 +29,10 @@ export function PatientSummarySheet({ findings, onClose, onPrint }: PatientSumma
                 animate={{ x: 0 }}
                 exit={{ x: "100%" }}
                 transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                className="absolute inset-y-0 right-0 flex w-full max-w-lg flex-col border-l border-ink bg-paper"
+                className="absolute inset-y-0 right-0 flex w-full max-w-lg flex-col border-l border-line bg-surface-raised shadow-2xl"
             >
-                <div className="flex items-center justify-between border-b border-ink px-6 py-3">
-                    <h3 className="label !text-ink">Patient-friendly summary</h3>
+                <div className="flex items-center justify-between border-b border-line px-6 py-3">
+                    <h3 className="text-[14px] font-medium">Patient-friendly summary</h3>
                     <div className="flex items-center gap-5">
                         <Button size="sm" variant="primary" onClick={onPrint}>Print</Button>
                         <button onClick={onClose} className="link text-[13px]" aria-label="Close">Close</button>
@@ -52,15 +52,15 @@ export function PatientSummarySheet({ findings, onClose, onPrint }: PatientSumma
 export function PatientSummaryBody({ findings }: { findings: { label: string }[] }) {
     return (
         <div className="text-[14px] leading-relaxed">
-            <div className="font-serif text-[34px] leading-tight">Your chest X-ray</div>
+            <div className="display text-[32px] leading-tight">Your chest X-ray</div>
             <p className="mt-3">
                 <strong>What this means:</strong> your chest X-ray suggests the findings listed below. This summary is to aid
                 understanding and does not replace medical advice.
             </p>
             <ul className="mt-4 space-y-2">
-                {findings.length === 0 && <li className="border-l-2 border-ink pl-3">{capitalize(toLayTerm("No findings"))}.</li>}
+                {findings.length === 0 && <li className="border-l-2 border-line pl-3">{capitalize(toLayTerm("No findings"))}.</li>}
                 {findings.map((f) => (
-                    <li key={f.label} className="border-l-2 border-ink pl-3">
+                    <li key={f.label} className="border-l-2 border-accent pl-3">
                         <strong>{capitalize(toLayTerm(f.label))}:</strong> please follow the plan agreed with your clinician.
                     </li>
                 ))}
@@ -70,11 +70,11 @@ export function PatientSummaryBody({ findings }: { findings: { label: string }[]
                 Depending on your symptoms and history, your clinician may arrange blood tests, a repeat X-ray, additional scans,
                 or treatment.
             </p>
-            <h4 className="mt-6 font-semibold text-marker-dark">Get urgent help if you develop:</h4>
+            <h4 className="mt-6 font-semibold text-urgent">Get urgent help if you develop:</h4>
             <ul className="mt-2 list-disc space-y-1 pl-5">
                 {SAFETY_NET_PATIENT.map((s) => <li key={s}>{s}</li>)}
             </ul>
-            <p className="mt-6 border-t border-rule pt-4 text-xs text-ink-muted">
+            <p className="mt-6 border-t border-line pt-4 text-xs text-fg-muted">
                 Disclaimer: decision support only. Not a diagnosis. Imaging must always be interpreted in clinical context.
             </p>
         </div>

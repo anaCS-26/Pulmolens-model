@@ -14,23 +14,22 @@ export function GuidedCard({ label, prob }: GuidedCardProps) {
     const bullets = GUIDANCE_BULLETS[label] || DEFAULT_GUIDANCE;
 
     return (
-        <article className="border-b border-rule py-5 first:pt-0">
-            <h3 className="flex items-baseline gap-3">
-                <span className="font-serif text-[21px]">{prettyLabel(label)}</span>
-                <span className="num font-mono text-[12px] text-marker">{pct(prob)}</span>
+        <article className="border-b border-line-soft py-5 first:pt-0 last:border-0">
+            <h3 className="flex items-center gap-2.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />
+                <span className="text-[16px] font-semibold">{prettyLabel(label)}</span>
+                <span className="num font-mono text-[12px] text-accent-ink [font-stretch:80%]">{pct(prob)}</span>
             </h3>
-            <p className="mt-1 max-w-[62ch] text-[13.5px] leading-relaxed text-ink-muted">{blurb}</p>
-            <ol className="mt-3 space-y-1.5 text-[14.5px]">
+            <p className="mt-1.5 max-w-[62ch] text-[13.5px] leading-relaxed text-fg-muted">{blurb}</p>
+            <ul className="mt-3 space-y-1.5 text-[14.5px] text-fg-soft">
                 {bullets.map((t, i) => (
-                    <li key={i} className="grid grid-cols-[1.5rem_1fr]">
-                        <span className="font-mono text-[12px] leading-[1.8] text-ink-faint">{i + 1}</span>
+                    <li key={i} className="grid grid-cols-[1rem_1fr]">
+                        <span className="text-fg-faint">–</span>
                         <span>{t}</span>
                     </li>
                 ))}
-            </ol>
-            {tags.length > 0 && (
-                <p className="mt-3 font-mono text-[11.5px] text-ink-muted">Sources: {tags.join("; ")}</p>
-            )}
+            </ul>
+            {tags.length > 0 && <p className="mt-3 text-[12.5px] text-fg-muted">Sources: {tags.join("; ")}</p>}
         </article>
     );
 }

@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { flushSync } from "react-dom";
 import { AnimatePresence } from "framer-motion";
+import { Printer } from "lucide-react";
+import { cn } from "../utils/cn";
 import { prettyLabel, pct } from "../utils/format";
 import { submitFeedback } from "../api";
 import { Prediction } from "../types";
@@ -33,14 +35,14 @@ interface ResultsProps {
 const COUNT_WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
 const countWord = (n: number) => COUNT_WORDS[n] ?? String(n);
 
-function Block({ n, title, aside, children }: { n: number; title: string; aside?: React.ReactNode; children: React.ReactNode }) {
+function Card({ title, aside, children, className }: { title: string; aside?: React.ReactNode; children: React.ReactNode; className?: string }) {
     return (
-        <section className="mb-14">
-            <h2 className="mb-5 flex items-baseline justify-between gap-4 border-t border-ink pt-3">
-                <span className="label !text-ink"><span className="mr-3 text-ink-faint">{n}</span>{title}</span>
+        <section className={cn("rounded-xl border border-line bg-surface-raised", className)}>
+            <h2 className="flex items-center justify-between gap-4 border-b border-line px-5 py-3.5 text-[15px] font-semibold sm:px-6">
+                {title}
                 {aside}
             </h2>
-            {children}
+            <div className="px-5 py-5 sm:px-6">{children}</div>
         </section>
     );
 }
@@ -96,71 +98,49 @@ export function Results({
         .join(" · ");
 
     return (
-        <section className="mx-auto max-w-[1200px] px-6 pb-24 pt-12">
+        <section className="mx-auto max-w-[1280px] px-4 pb-24 pt-10 sm:px-6 lg:px-10">
             <FlowProgress current={errorMsg ? 2 : 4} />
 
-            <div className="mt-6 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div className="mt-7 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                 <div className="min-w-0">
-                    <h1 className="font-serif text-[44px] font-normal leading-none tracking-[-0.02em] md:text-[56px]">Report</h1>
-                    <div className="mt-3 truncate font-mono text-[12px] text-ink-muted">{meta}</div>
+                    <h1 className="display text-[40px] leading-none md:text-[54px]">Report</h1>
+                    <div className="mt-3 truncate text-[13.5px] text-fg-muted">{meta}</div>
                 </div>
-                <div className="flex flex-wrap items-center gap-5">
-                    <button onClick={onRestart} className="link text-sm">New analysis</button>
-                    <Button variant="outline" onClick={() => print("clinician")} disabled={!!errorMsg}>Print report</Button>
+                <div className="flex flex-wrap items-center gap-3">
+                    <Button variant="text" onClick={onRestart} className="mr-2 text-[14px]">New analysis</Button>
+                    <Button variant="outline" onClick={() => print("clinician")} disabled={!!errorMsg}><Printer className="h-4 w-4" /> Print report</Button>
                     <Button variant="primary" onClick={() => setShowPatientSheet(true)} disabled={!!errorMsg}>Patient summary</Button>
                 </div>
             </div>
 
             {errorMsg ? (
-                <div className="mt-10 grid grid-cols-1 gap-x-12 gap-y-10 border-t border-ink pt-8 lg:grid-cols-12">
+                <div className="mt-10 grid grid-cols-1 gap-x-12 gap-y-10 lg:grid-cols-12">
                     <div className="lg:col-span-6">
-                        <p className="font-serif text-[30px] leading-tight">The analysis didn't complete.</p>
-                        <p className="mt-3 max-w-[48ch] text-[15px] leading-relaxed text-ink-soft">
+                        <p className="display text-[30px] leading-tight">The analysis didn't complete.</p>
+                        <p className="mt-3 max-w-[48ch] text-[15.5px] leading-relaxed text-fg-soft">
                             The model server couldn't be reached or returned an error. PulmoLens never substitutes mock results, so
                             nothing is shown.
                         </p>
-                        <pre className="mt-5 max-h-32 overflow-auto whitespace-pre-wrap border-l-2 border-marker bg-paper-raised px-4 py-3 font-mono text-[12px] text-marker-dark">{errorMsg}</pre>
+                        <pre className="mt-5 max-h-32 overflow-auto whitespace-pre-wrap rounded-lg border border-urgent/40 bg-urgent/[0.05] px-4 py-3 font-mono text-[12px] text-urgent">{errorMsg}</pre>
                         <div className="mt-6 flex flex-wrap items-center gap-5">
                             {file && <Button variant="primary" onClick={onRetry}>Try again</Button>}
-                            <button onClick={onRestart} className="link text-sm">Choose another image</button>
+                            <button onClick={onRestart} className="link text-[14px]">Choose another image</button>
                         </div>
                     </div>
                     {imageURL && (
-                        <FilmPanel className="aspect-[4/3] lg:col-span-6" tl={title} bl="Not analysed">
+                        <FilmPanel className="aspect-square lg:col-span-6" tl={title} bl="Not analysed">
                             <img src={imageURL} alt="Uploaded chest X-ray" className="h-full w-full object-contain opacity-60" />
                         </FilmPanel>
                     )}
                 </div>
             ) : (
                 <>
-                    {/* Impression */}
-                    <div className="mt-10 grid grid-cols-1 gap-x-12 gap-y-3 border-t border-ink pt-5 md:grid-cols-12">
-                        <div className="label !text-ink md:col-span-3">Impression</div>
-                        <p className="font-serif text-[24px] leading-[1.35] md:col-span-9 md:text-[28px]">
-                            {flagged.length === 0 ? (
-                                <>
-                                    No finding scored above its cutoff.
-                                    {top && <> The highest was {prettyLabel(top.label).toLowerCase()}, at <span className="num font-mono text-[0.8em]">{pct(top.prob)}</span>.</>}
-                                </>
-                            ) : (
-                                <>
-                                    {countWord(flagged.length)} {flagged.length === 1 ? "finding" : "findings"} above cutoff:{" "}
-                                    {flagged.map((f, i) => (
-                                        <React.Fragment key={f.label}>
-                                            {i > 0 && (i === flagged.length - 1 ? " and " : ", ")}
-                                            {prettyLabel(f.label).toLowerCase()}{" "}
-                                            <span className="num font-mono text-[0.8em] text-marker">{pct(f.prob)}</span>
-                                        </React.Fragment>
-                                    ))}
-                                    .
-                                </>
-                            )}
-                        </p>
-                    </div>
-
-                    <div className="mt-12 grid grid-cols-1 gap-x-12 gap-y-12 lg:grid-cols-12">
-                        <div className="lg:sticky lg:top-20 lg:col-span-5 lg:self-start">
+                    {/* Workstation: film on a black stage, impression and findings beside it */}
+                    <div className="mt-10 grid grid-cols-1 overflow-hidden rounded-xl border border-line bg-surface-raised lg:grid-cols-[minmax(0,1fr)_minmax(0,470px)]">
+                        <div className="flex items-center bg-film p-4 sm:p-5">
                             <XrayViewer
+                                tone="film"
+                                className="mx-auto w-full max-w-[620px]"
                                 imageURL={imageURL}
                                 overlay={attentionOverlay}
                                 overlayFinding={top?.label}
@@ -171,36 +151,68 @@ export function Results({
                                 setOpacity={setOpacity}
                                 onExpand={() => setFullscreen(true)}
                             />
-                            <div className="mt-8">
-                                <FeedbackBar onSubmit={handleFeedback} disabled={!file} />
+                        </div>
+                        <div className="flex min-w-0 flex-col border-t border-line lg:border-l lg:border-t-0">
+                            <div className="border-b border-line px-5 py-5 sm:px-6">
+                                <div className="text-[12.5px] text-fg-faint">Impression</div>
+                                <p className="mt-1.5 text-[20px] font-medium leading-snug md:text-[22px]">
+                                    {flagged.length === 0 ? (
+                                        <>
+                                            No finding scored above its cutoff.
+                                            {top && <> The highest was {prettyLabel(top.label).toLowerCase()}, at <span className="num">{pct(top.prob)}</span>.</>}
+                                        </>
+                                    ) : (
+                                        <>
+                                            {countWord(flagged.length)} {flagged.length === 1 ? "finding" : "findings"} above cutoff:{" "}
+                                            {flagged.map((f, i) => (
+                                                <React.Fragment key={f.label}>
+                                                    {i > 0 && (i === flagged.length - 1 ? " and " : ", ")}
+                                                    <span className="font-semibold text-accent-ink">{prettyLabel(f.label).toLowerCase()}</span>{" "}
+                                                    <span className="num text-[0.8em] text-fg-muted">{pct(f.prob)}</span>
+                                                </React.Fragment>
+                                            ))}
+                                            .
+                                        </>
+                                    )}
+                                </p>
+                            </div>
+                            <div className="px-5 py-5 sm:px-6">
+                                <FindingsTable predictions={predictions} />
                             </div>
                         </div>
+                    </div>
 
-                        <div className="lg:col-span-7">
-                            <Block n={1} title="Findings">
-                                <FindingsTable predictions={predictions} />
-                            </Block>
+                    <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
+                        <Card
+                            title="Summary"
+                            className="lg:col-span-7"
+                            aside={
+                                isSummarizing ? (
+                                    <span className="flex items-center gap-2 text-[12.5px] font-normal text-accent-ink">
+                                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" /> Streaming
+                                    </span>
+                                ) : (
+                                    <span className="text-[12.5px] font-normal text-fg-muted">AI-generated</span>
+                                )
+                            }
+                        >
+                            <ClinicalReport report={report} sources={sources} isSummarizing={isSummarizing} hasOverlay={!!attentionOverlay} />
+                        </Card>
 
-                            <Block
-                                n={2}
-                                title="Synthesis"
-                                aside={isSummarizing ? <span className="font-mono text-[11px] text-marker">streaming<span className="animate-caret-blink">_</span></span> : <span className="font-mono text-[11px] text-ink-muted">AI-generated</span>}
-                            >
-                                <ClinicalReport report={report} sources={sources} isSummarizing={isSummarizing} hasOverlay={!!attentionOverlay} />
-                            </Block>
-
-                            <Block n={3} title="Guidance">
+                        <div className="space-y-6 lg:col-span-5">
+                            <Card title="Next steps" aside={<span className="text-[12.5px] font-normal text-fg-muted">{flagged.length} flagged</span>}>
                                 {flagged.length === 0 ? (
-                                    <p className="text-[14.5px] text-ink-soft">No acute radiographic abnormality above the current threshold. Correlate with clinical picture.</p>
+                                    <p className="text-[14.5px] text-fg-soft">No acute radiographic abnormality above the current threshold. Correlate with the clinical picture.</p>
                                 ) : (
                                     flagged.slice(0, 6).map((a) => <GuidedCard key={a.label} label={a.label} prob={a.prob} />)
                                 )}
-                            </Block>
-
-                            <Block n={4} title="Safety net">
-                                <SafetyNet />
-                            </Block>
+                            </Card>
+                            <SafetyNet />
                         </div>
+                    </div>
+
+                    <div className="mt-6 rounded-xl border border-line px-5 py-4 sm:px-6">
+                        <FeedbackBar onSubmit={handleFeedback} disabled={!file} />
                     </div>
                 </>
             )}

@@ -1,74 +1,85 @@
 import React from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Section } from "../components/ui/Section";
+import { cn } from "../utils/cn";
 
 interface AboutProps {
     onBack: () => void;
     onStart: () => void;
 }
 
-const SECTIONS: { title: string; warn?: boolean; items: React.ReactNode[] }[] = [
-    {
-        title: "Aims",
-        items: [
-            "Support clinicians and students with concise, guideline-anchored chest X-ray summaries.",
-            "Standardise first-line investigations and safety-net advice for common thoracic findings.",
-            "Speed up learning through transparent, citable references.",
-        ],
-    },
-    {
-        title: "Initiatives",
-        items: [
-            "Integrate UK guidance (NICE, BTS) and institutional documents.",
-            "Offer structured clinician reports and a one-click patient summary.",
-            "Design for accessibility, privacy, and auditability.",
-        ],
-    },
-    {
-        title: "Warnings and disclaimers",
-        warn: true,
-        items: [
-            <><span className="font-medium">Decision support only:</span> not a diagnosis, and not a substitute for clinical judgement.</>,
-            <><span className="font-medium">Context matters:</span> history, examination, labs, and prior imaging all change management.</>,
-            <><span className="font-medium">Urgent symptoms:</span> severe breathlessness, chest pain, haemoptysis, or hypoxia warrant urgent care.</>,
-            <><span className="font-medium">Data protection:</span> use de-identified images only.</>,
-            <><span className="font-medium">Model limits:</span> performance varies with device, positioning, and image quality.</>,
-        ],
-    },
+const AIMS = [
+    "Support clinicians and students with concise, guideline-anchored chest X-ray summaries.",
+    "Standardise first-line investigations and safety-net advice for common thoracic findings.",
+    "Speed up learning through transparent, citable references.",
+];
+
+const INITIATIVES = [
+    "Integrate UK guidance (NICE, BTS) and institutional documents.",
+    "Offer structured clinician reports and a one-click patient summary.",
+    "Design for accessibility, privacy and auditability.",
+];
+
+const WARNINGS: { title: string; body: string; urgent?: boolean }[] = [
+    { title: "Urgent symptoms", body: "Severe breathlessness, chest pain, haemoptysis or hypoxia warrant urgent care.", urgent: true },
+    { title: "Decision support only", body: "Not a diagnosis, and not a substitute for clinical judgement." },
+    { title: "Context matters", body: "History, examination, labs and prior imaging all change management." },
+    { title: "Data protection", body: "Use de-identified images only." },
+    { title: "Model limits", body: "Performance varies with device, positioning and image quality." },
 ];
 
 export function About({ onBack, onStart }: AboutProps) {
     return (
-        <div className="mx-auto max-w-[1200px] px-6">
-            <header className="pb-14 pt-14 md:pb-20 md:pt-20">
-                <button onClick={onBack} className="link text-sm text-ink-muted">← Overview</button>
-                <h1 className="mt-8 max-w-[14em] font-serif text-[44px] font-normal leading-[1.02] tracking-[-0.02em] md:text-[64px]">
+        <div>
+            <header className="mx-auto max-w-[1280px] px-4 pb-16 pt-12 sm:px-6 md:pb-24 md:pt-20 lg:px-10">
+                <button onClick={onBack} className="flex items-center gap-1.5 text-[14px] text-fg-muted transition-colors hover:text-fg">
+                    <ArrowLeft className="h-4 w-4" /> Overview
+                </button>
+                <h1 className="display mt-8 max-w-[14em] text-[42px] leading-[1] md:text-[66px] [font-stretch:118%]">
                     A transparent tool for learning to read chest films.
                 </h1>
             </header>
 
-            {SECTIONS.map((s, i) => (
-                <Section key={s.title} index={String(i + 1).padStart(2, "0")} label={s.title}>
-                    <ol className="max-w-[40em] space-y-3 text-[17px] leading-[1.55]">
-                        {s.items.map((it, j) => (
-                            <li key={j} className="grid grid-cols-[2rem_1fr]">
-                                <span className={`font-mono text-[12px] leading-[2.2] ${s.warn ? "text-marker" : "text-ink-faint"}`}>{j + 1}.</span>
-                                <span className="text-ink-soft">{it}</span>
-                            </li>
-                        ))}
-                    </ol>
-                </Section>
-            ))}
-
-            <Section label="Next">
-                <div className="flex flex-wrap items-center gap-6">
-                    <Button variant="primary" onClick={onStart} className="h-11 px-5">
-                        Analyse an X-ray <ArrowRight className="h-4 w-4" />
-                    </Button>
-                    <button onClick={onBack} className="link text-sm">Back to the overview</button>
+            <Section kicker="Purpose" title="What it's for">
+                <div className="mt-10 grid grid-cols-1 gap-10 md:grid-cols-2">
+                    <List heading="Aims" items={AIMS} />
+                    <List heading="Initiatives" items={INITIATIVES} />
                 </div>
             </Section>
+
+            <Section kicker="Warnings" title="Read these before you upload anything.">
+                <div className="mt-10 grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-line bg-line md:grid-cols-2">
+                    {WARNINGS.map((w) => (
+                        <div key={w.title} className={cn("bg-surface px-6 py-6", w.urgent && "bg-surface-raised md:col-span-2")}>
+                            <h3 className="flex items-center gap-2.5 text-[17px] font-semibold">
+                                {w.urgent && <span className="h-2 w-2 rounded-full bg-urgent shadow-[0_0_0_4px_rgb(var(--urgent)/0.18)]" aria-hidden />}
+                                {w.title}
+                            </h3>
+                            <p className="mt-1.5 text-[15px] text-fg-muted">{w.body}</p>
+                        </div>
+                    ))}
+                </div>
+                <div className="mt-12 flex flex-wrap items-center gap-4">
+                    <Button variant="primary" size="lg" onClick={onStart}>
+                        Analyse an X-ray <ArrowRight className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="lg" onClick={onBack}>Back to the overview</Button>
+                </div>
+            </Section>
+        </div>
+    );
+}
+
+function List({ heading, items }: { heading: string; items: string[] }) {
+    return (
+        <div>
+            <h3 className="border-b border-line pb-3 text-[16px] font-semibold">{heading}</h3>
+            <ul className="mt-1">
+                {items.map((it) => (
+                    <li key={it} className="border-b border-line-soft py-3.5 text-[16px] leading-relaxed text-fg-soft">{it}</li>
+                ))}
+            </ul>
         </div>
     );
 }

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { ArrowRight, Check, Upload } from "lucide-react";
 import { cn } from "../utils/cn";
 import { Button } from "../components/ui/Button";
 import { EASE_OUT } from "../components/ui/motion";
@@ -83,26 +84,24 @@ export function UploadPanel({ agreed, onAgree, onFile }: UploadPanelProps) {
     }, [agreed, submit]);
 
     return (
-        <section className="mx-auto max-w-[1200px] px-6 pb-24 pt-12">
+        <section className="mx-auto max-w-[1280px] px-4 pb-24 pt-10 sm:px-6 lg:px-10">
             <FlowProgress current={agreed ? 1 : 0} />
-            <h1 className="mt-6 font-serif text-[44px] font-normal leading-none tracking-[-0.02em] md:text-[56px]">New analysis</h1>
+            <h1 className="display mt-7 text-[40px] leading-none md:text-[54px]">New analysis</h1>
 
-            <div className="mt-12 grid grid-cols-1 gap-x-12 gap-y-14 lg:grid-cols-12">
-                <div className="lg:col-span-8">
+            <div className="mt-10 grid grid-cols-1 gap-x-10 gap-y-10 lg:grid-cols-12">
+                <div className="space-y-5 lg:col-span-8">
                     {/* Step 1 */}
-                    <div className="border-t border-ink pt-5">
-                        <div className="flex items-baseline justify-between gap-4">
-                            <h2 className="flex items-baseline gap-3 text-[17px] font-medium">
-                                <span className="font-mono text-[12px] text-ink-faint">1</span> Consent and data handling
-                            </h2>
+                    <div className="rounded-xl border border-line bg-surface-raised p-5 sm:p-6">
+                        <div className="flex items-center justify-between gap-4">
+                            <StepTitle n={1} done={agreed}>Consent and data handling</StepTitle>
                             {agreed && (
-                                <button onClick={() => onAgree(false)} className="link text-[13px] text-ink-muted">Review</button>
+                                <button onClick={() => onAgree(false)} className="link text-[13px] text-fg-muted">Review</button>
                             )}
                         </div>
                         <AnimatePresence initial={false} mode="wait">
                             {agreed ? (
-                                <motion.p key="done" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-2 pl-[22px] text-[14px] text-ink-muted">
-                                    ✓ Accepted for this browser session.
+                                <motion.p key="done" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-2 pl-9 text-[14px] text-fg-muted">
+                                    Accepted for this browser session.
                                 </motion.p>
                             ) : (
                                 <ConsentForm key="form" onAgree={() => onAgree(true)} />
@@ -111,51 +110,49 @@ export function UploadPanel({ agreed, onAgree, onFile }: UploadPanelProps) {
                     </div>
 
                     {/* Step 2 */}
-                    <div className={cn("mt-12 border-t pt-5 transition-colors", agreed ? "border-ink" : "border-rule")}>
-                        <h2 className={cn("flex items-baseline gap-3 text-[17px] font-medium", !agreed && "text-ink-faint")}>
-                            <span className="font-mono text-[12px] text-ink-faint">2</span> Image
-                        </h2>
+                    <div className={cn("rounded-xl border p-5 transition-colors sm:p-6", agreed ? "border-line bg-surface-raised" : "border-line-soft bg-transparent")}>
+                        <StepTitle n={2} muted={!agreed}>Image</StepTitle>
                         {agreed ? (
                             <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: EASE_OUT }}>
                                 <Dropzone onFile={submit} />
                                 {error && (
-                                    <p role="alert" className="mt-3 border-l-2 border-marker pl-3 text-[14px] text-marker-dark">{error}</p>
+                                    <p role="alert" className="mt-3 rounded-lg border border-urgent/40 bg-urgent/[0.05] px-3.5 py-2.5 text-[14px] text-urgent">{error}</p>
                                 )}
                             </motion.div>
                         ) : (
-                            <p className="mt-2 pl-[22px] text-[14px] text-ink-faint">Available once you've accepted the notice above, or use a sample film.</p>
+                            <p className="mt-2 pl-9 text-[14px] text-fg-faint">Available once you've accepted the notice above, or use a sample film.</p>
                         )}
                     </div>
                 </div>
 
-                <aside className="lg:col-span-4">
-                    <div className="border-t border-ink pt-5">
-                        <h2 className="text-[17px] font-medium">Sample films</h2>
-                        <p className="mt-1 text-[14px] text-ink-muted">No image to hand? Run the full pipeline on a bundled film.</p>
-                        <div className="mt-5 grid grid-cols-2 gap-3">
+                <aside className="space-y-8 lg:col-span-4">
+                    <div>
+                        <h2 className="text-[16px] font-semibold">Sample films</h2>
+                        <p className="mt-1 text-[14px] text-fg-muted">No image to hand? Run the full pipeline on a bundled film.</p>
+                        <div className="mt-4 grid grid-cols-2 gap-3">
                             {[1, 2].map((i) => (
                                 <button key={i} onClick={() => loadSample(i)} className="group text-left" aria-label={`Analyse sample ${i}`}>
-                                    <FilmPanel className="aspect-square" tl={`Sample 0${i}`}>
-                                        <img src={`/example${i}.png`} alt="" className="h-full w-full object-cover opacity-90 transition-opacity group-hover:opacity-100" />
+                                    <FilmPanel className="aspect-square transition-shadow group-hover:ring-accent" tl={`Sample 0${i}`}>
+                                        <img src={`/example${i}.png`} alt="" className="h-full w-full object-cover opacity-85 transition-opacity group-hover:opacity-100" />
                                     </FilmPanel>
-                                    <span className="mt-2 inline-block text-[13px] text-ink-muted transition-colors group-hover:text-ink">
-                                        Analyse sample {i} →
+                                    <span className="mt-2 flex items-center gap-1.5 text-[13.5px] text-fg-muted transition-colors group-hover:text-fg">
+                                        Analyse sample {i} <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                                     </span>
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    <div className="mt-10 border-t border-rule pt-5">
-                        <h2 className="text-[15px] font-medium">What happens next</h2>
-                        <ol className="mt-3 space-y-2.5 text-[14px] leading-relaxed text-ink-muted">
+                    <div className="border-t border-line pt-6">
+                        <h2 className="text-[16px] font-semibold">What happens next</h2>
+                        <ol className="mt-3 space-y-3 text-[14px] leading-relaxed text-fg-muted">
                             {[
-                                "Your image is sent to the backend.",
-                                "The server runs the model and returns pathology probabilities and an attention overlay.",
-                                "Only live model output is displayed. If the server is unavailable you'll see an error, never mock results.",
+                                "Your image is sent to the model server.",
+                                "The server returns a score for each of fourteen findings and an attention map.",
+                                "Only live model output is shown. If the server is unavailable you'll see an error, never mock results.",
                             ].map((t, i) => (
-                                <li key={i} className="grid grid-cols-[1.25rem_1fr]">
-                                    <span className="font-mono text-[12px] leading-[1.9] text-ink-faint">{i + 1}</span>
+                                <li key={i} className="grid grid-cols-[1.5rem_1fr]">
+                                    <span className="num text-fg-faint">{i + 1}</span>
                                     <span>{t}</span>
                                 </li>
                             ))}
@@ -172,12 +169,12 @@ export function UploadPanel({ agreed, onAgree, onFile }: UploadPanelProps) {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.15 }}
-                        className="pointer-events-none fixed inset-0 z-50 bg-paper/90 p-6"
+                        className="pointer-events-none fixed inset-0 z-50 bg-surface/90 p-6 backdrop-blur-sm"
                     >
-                        <div className="grid h-full w-full place-items-center border-2 border-dashed border-ink">
+                        <div className="grid h-full w-full place-items-center rounded-2xl border-2 border-dashed border-accent">
                             <div className="text-center">
-                                <div className="font-serif text-5xl">Drop to analyse</div>
-                                <div className="mt-3 font-mono text-[12px] text-ink-muted">PNG or JPG · up to 10 MB</div>
+                                <div className="display text-[44px]">Drop to analyse</div>
+                                <div className="mt-2 text-[14px] text-fg-muted">PNG or JPG · up to 10 MB</div>
                             </div>
                         </div>
                     </motion.div>
@@ -187,25 +184,41 @@ export function UploadPanel({ agreed, onAgree, onFile }: UploadPanelProps) {
     );
 }
 
+function StepTitle({ n, done, muted, children }: { n: number; done?: boolean; muted?: boolean; children: React.ReactNode }) {
+    return (
+        <h2 className={cn("flex items-center gap-3 text-[17px] font-semibold", muted && "text-fg-faint")}>
+            <span
+                className={cn(
+                    "grid h-6 w-6 place-items-center rounded-full border text-[12px] num",
+                    done ? "border-line bg-surface-sunk text-fg-muted" : muted ? "border-line" : "border-accent bg-accent text-black"
+                )}
+            >
+                {done ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} /> : n}
+            </span>
+            {children}
+        </h2>
+    );
+}
+
 function ConsentForm({ onAgree }: { onAgree: () => void }) {
     const [checked, setChecked] = useState(false);
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="mt-5 pl-[22px]">
-            <div className="border-l-2 border-marker bg-paper-raised px-5 py-4">
-                <p className="font-medium">Please do not upload any image containing sensitive or patient-identifiable information.</p>
-                <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="mt-5 sm:pl-9">
+            <div className="rounded-lg border border-accent/40 bg-accent/[0.06] px-5 py-4">
+                <p className="font-semibold">Please do not upload any image containing sensitive or patient-identifiable information.</p>
+                <p className="mt-2 text-[14px] leading-relaxed text-fg-soft">
                     PulmoLens is a demonstration tool. Uploaded images are processed to generate output and help us understand how
                     the prototype is used. They are <strong className="font-semibold">not</strong> used to train the model, but they
                     are stored for analysis. By continuing, you accept the risks of uploading data to a public demo environment.
                 </p>
             </div>
 
-            <label className="mt-5 flex cursor-pointer items-start gap-3 text-[14.5px]">
+            <label className="mt-5 flex cursor-pointer items-start gap-3 text-[14.5px] text-fg-soft">
                 <input
                     type="checkbox"
                     checked={checked}
                     onChange={(e) => setChecked(e.target.checked)}
-                    className="mt-[3px] h-4 w-4 shrink-0 cursor-pointer accent-ink"
+                    className="mt-[3px] h-4 w-4 shrink-0 cursor-pointer accent-[rgb(var(--accent))]"
                 />
                 <span>I have read the privacy notice, will only upload de-identified test images, and accept the risks.</span>
             </label>
@@ -232,16 +245,17 @@ function Dropzone({ onFile }: { onFile: (f: File | undefined) => void }) {
             tabIndex={0}
             aria-label="Upload a chest X-ray"
             className={cn(
-                "mt-5 ml-[22px] flex h-64 cursor-pointer flex-col items-center justify-center border border-dashed text-center transition-colors",
-                hover ? "border-ink bg-paper-raised" : "border-ink/35 hover:border-ink hover:bg-paper-raised"
+                "mt-5 flex h-64 cursor-pointer flex-col items-center justify-center rounded-xl border-[1.5px] border-dashed text-center transition-colors sm:ml-9",
+                hover ? "border-accent bg-accent/[0.05]" : "border-line hover:border-fg-muted hover:bg-surface-sunk/60"
             )}
         >
-            <div className="font-serif text-[28px] leading-tight">Drop a radiograph here</div>
-            <div className="mt-2 text-[14px] text-ink-muted">
-                or <span className="text-ink underline decoration-ink/30 underline-offset-[3px]">choose a file</span>, or paste one with{" "}
-                <kbd className="font-mono text-[12px]">Ctrl V</kbd>
+            <Upload className="h-6 w-6 text-fg-muted" strokeWidth={1.5} />
+            <div className="mt-3 text-[20px] font-semibold [font-stretch:108%]">Drop a radiograph here</div>
+            <div className="mt-1.5 text-[14px] text-fg-muted">
+                or <span className="text-fg underline decoration-accent underline-offset-[3px]">choose a file</span>, or paste one with{" "}
+                <kbd className="rounded border border-line bg-surface-sunk px-1.5 py-0.5 font-sans text-[12px]">Ctrl V</kbd>
             </div>
-            <div className="mt-5 font-mono text-[11.5px] text-ink-faint">PNG or JPG · up to 10 MB</div>
+            <div className="mt-4 text-[12.5px] text-fg-faint">PNG or JPG · up to 10 MB</div>
             <input
                 ref={inputRef}
                 type="file"

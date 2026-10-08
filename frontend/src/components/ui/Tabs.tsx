@@ -6,30 +6,37 @@ interface TabsProps<T extends string> {
     onChange: (v: T) => void;
     options: { value: T; label: React.ReactNode; disabled?: boolean }[];
     className?: string;
-    tone?: "paper" | "film";
+    /** "surface" sits on the page; "film" sits on a black viewer. */
+    tone?: "surface" | "film";
+    label?: string;
 }
 
-/** Text tabs with an underline, as on a printed form. */
-export function Tabs<T extends string>({ value, onChange, options, className, tone = "paper" }: TabsProps<T>) {
+/** Segmented control, as on a PACS toolbar. */
+export function Tabs<T extends string>({ value, onChange, options, className, tone = "surface", label }: TabsProps<T>) {
+    const film = tone === "film";
     return (
-        <div role="tablist" className={cn("flex items-center gap-5", className)}>
+        <div
+            role="group"
+            aria-label={label}
+            className={cn(
+                "inline-flex rounded-lg border p-[3px]",
+                film ? "border-white/15 bg-white/5" : "border-line bg-surface-raised",
+                className
+            )}
+        >
             {options.map((o) => {
                 const active = o.value === value;
                 return (
                     <button
                         key={o.value}
-                        role="tab"
-                        aria-selected={active}
+                        aria-pressed={active}
                         disabled={o.disabled}
                         onClick={() => onChange(o.value)}
                         className={cn(
-                            "relative py-1 text-[13px] transition-colors disabled:opacity-35 disabled:cursor-not-allowed",
-                            tone === "paper"
-                                ? active ? "text-ink font-medium" : "text-ink-muted hover:text-ink"
-                                : active ? "text-white font-medium" : "text-white/50 hover:text-white",
-                            "after:absolute after:inset-x-0 after:-bottom-px after:h-px after:transition-opacity",
-                            tone === "paper" ? "after:bg-ink" : "after:bg-white",
-                            active ? "after:opacity-100" : "after:opacity-0"
+                            "rounded-md px-3 py-1.5 text-[13px] transition-colors disabled:cursor-not-allowed disabled:opacity-35",
+                            film
+                                ? active ? "bg-white/15 text-white" : "text-white/55 hover:text-white"
+                                : active ? "bg-surface-sunk text-fg shadow-[inset_0_0_0_1px_rgb(var(--line))]" : "text-fg-muted hover:text-fg"
                         )}
                     >
                         {o.label}

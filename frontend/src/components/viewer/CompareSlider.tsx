@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { animate } from "framer-motion";
+import { MoveHorizontal } from "lucide-react";
 import { cn } from "../../utils/cn";
 
 interface CompareSliderProps {
@@ -16,7 +17,7 @@ interface CompareSliderProps {
  * Two layers stacked exactly on top of each other; a draggable divider reveals
  * `before` on the left and `after` on the right.
  */
-export function CompareSlider({ before, after, beforeLabel = "Original", afterLabel = "Overlay", autoplay, className }: CompareSliderProps) {
+export function CompareSlider({ before, after, beforeLabel = "Original", afterLabel = "Attention", autoplay, className }: CompareSliderProps) {
     const ref = useRef<HTMLDivElement>(null);
     const [pos, setPos] = useState(50);
     const [dragging, setDragging] = useState(false);
@@ -66,30 +67,30 @@ export function CompareSlider({ before, after, beforeLabel = "Original", afterLa
                 {before}
             </div>
 
-            <span className="film-text pointer-events-none absolute bottom-2.5 left-3" style={{ opacity: pos > 14 ? 1 : 0, transition: "opacity 200ms" }}>
+            <span className="film-text pointer-events-none absolute bottom-3 left-3.5" style={{ opacity: pos > 14 ? 1 : 0, transition: "opacity 200ms" }}>
                 {beforeLabel}
             </span>
-            <span className="film-text pointer-events-none absolute bottom-2.5 right-3" style={{ opacity: pos < 86 ? 1 : 0, transition: "opacity 200ms" }}>
+            <span className="film-text pointer-events-none absolute bottom-3 right-3.5" style={{ opacity: pos < 86 ? 1 : 0, transition: "opacity 200ms" }}>
                 {afterLabel}
             </span>
 
             <div className="pointer-events-none absolute inset-y-0" style={{ left: `${pos}%` }}>
-                <div className="absolute inset-y-0 -translate-x-1/2 w-px bg-white" />
+                <div className="absolute inset-y-0 w-[2px] -translate-x-1/2 bg-white/90" />
                 <div
                     role="slider"
                     tabIndex={0}
-                    aria-label="Compare original and overlay"
+                    aria-label="Compare original and attention map"
                     aria-valuemin={0}
                     aria-valuemax={100}
                     aria-valuenow={Math.round(pos)}
                     onKeyDown={onKey}
                     className={cn(
-                        "pointer-events-auto absolute top-1/2 grid h-7 w-3.5 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-[2px]",
-                        "bg-white ring-1 ring-black/40 transition-[height]",
-                        dragging && "h-9"
+                        "pointer-events-auto absolute top-1/2 grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full",
+                        "bg-white text-black shadow-[0_2px_12px_rgba(0,0,0,0.5)] transition-transform",
+                        dragging && "scale-110"
                     )}
                 >
-                    <span className="h-3 w-px bg-black/50" />
+                    <MoveHorizontal className="h-4 w-4" strokeWidth={2} />
                 </div>
             </div>
         </div>

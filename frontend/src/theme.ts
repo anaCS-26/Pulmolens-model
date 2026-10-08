@@ -3,9 +3,9 @@ import { useEffect, useState } from "react";
 export type Theme = "light" | "dark";
 
 // Kept in sync with the inline script in index.html, which applies the theme
-// before first paint so a dark-mode visitor never sees a flash of paper.
+// before first paint so a dark-mode visitor never sees a flash of white.
 const KEY = "pulmolens.theme";
-const META_COLOR: Record<Theme, string> = { light: "#f2efe8", dark: "#161513" };
+const META_COLOR: Record<Theme, string> = { light: "#f1f4f6", dark: "#0b0f12" };
 
 function apply(t: Theme) {
     document.documentElement.classList.toggle("dark", t === "dark");

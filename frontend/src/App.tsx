@@ -196,10 +196,10 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   render() {
     if (this.state.hasError) {
       return (
-        <div className="mx-auto mt-16 max-w-2xl border-l-2 border-marker px-6 py-4">
-          <h2 className="font-serif text-2xl">App Rendering Error</h2>
-          <pre className="mt-4 overflow-auto font-mono text-xs text-marker-dark">{this.state.error?.toString()}</pre>
-          <button onClick={() => window.location.reload()} className="mt-5 rounded bg-ink px-4 py-2 text-sm font-medium text-paper">Reload Page</button>
+        <div className="mx-auto mt-16 max-w-2xl rounded-xl border border-urgent/40 bg-urgent/[0.04] px-6 py-5">
+          <h2 className="display text-2xl">The report couldn't be displayed</h2>
+          <pre className="mt-4 overflow-auto font-mono text-xs text-urgent">{this.state.error?.toString()}</pre>
+          <button onClick={() => window.location.reload()} className="mt-5 rounded-lg bg-solid px-4 py-2 text-sm font-medium text-solid-fg">Reload page</button>
         </div>
       );
     }

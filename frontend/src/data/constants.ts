@@ -82,3 +82,29 @@ export const THRESHOLDS: Record<string, number> = {
     "Hernia": 0.7249,
     "No findings": 0.5, // Fallback
 };
+
+/** Held-out test-set results per finding, from the classification report in the project README. */
+export const MODEL_PERFORMANCE: { label: string; precision: number; recall: number; support: number }[] = [
+    { label: "Infiltration", precision: 0.24, recall: 0.91, support: 2129 },
+    { label: "Effusion", precision: 0.32, recall: 0.87, support: 1369 },
+    { label: "Atelectasis", precision: 0.24, recall: 0.82, support: 1155 },
+    { label: "Emphysema", precision: 0.30, recall: 0.74, support: 279 },
+    { label: "Pneumothorax", precision: 0.27, recall: 0.72, support: 549 },
+    { label: "Edema", precision: 0.14, recall: 0.67, support: 248 },
+    { label: "Cardiomegaly", precision: 0.17, recall: 0.66, support: 261 },
+    { label: "Mass", precision: 0.23, recall: 0.64, support: 551 },
+    { label: "Nodule", precision: 0.20, recall: 0.63, support: 684 },
+    { label: "Consolidation", precision: 0.16, recall: 0.59, support: 550 },
+    { label: "Pleural_Thickening", precision: 0.16, recall: 0.53, support: 345 },
+    { label: "Hernia", precision: 0.26, recall: 0.50, support: 32 },
+    { label: "Fibrosis", precision: 0.10, recall: 0.40, support: 178 },
+    { label: "Pneumonia", precision: 0.06, recall: 0.20, support: 164 },
+];
+
+export const MODEL_SUMMARY = { meanAuc: 0.851, microRecall: 0.76, microPrecision: 0.23, positives: 8494 };
+
+/** Findings whose recall is low enough that a below-cutoff score should not reassure. */
+export const LOW_RECALL_NOTE: Record<string, string> = {
+    Pneumonia: "Recall for pneumonia is 0.20, so a low score doesn't rule it out.",
+    Fibrosis: "Recall for fibrosis is 0.40, so a low score doesn't rule it out.",
+};
