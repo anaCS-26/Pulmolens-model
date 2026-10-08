@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="film" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e3e9ed"/>
+      <stop offset="1" stop-color="#7d8c95"/>
+    </linearGradient>
+    <radialGradient id="hot">
+      <stop offset="0" stop-color="#ffe0a0"/>
+      <stop offset="0.35" stop-color="#f2a23a"/>
+      <stop offset="1" stop-color="#f2a23a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#0b0f12"/>
+  <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="13.25" fill="none" stroke="#fff" stroke-opacity="0.14" stroke-width="1.5"/>
+  <path d="M29.5 10C20 11 9.5 23 8 41 7.5 50 11 55 18 53.5L29.5 50Z" fill="url(#film)"/>
+  <path d="M34.5 10C44 11 54.5 23 56 41 56.5 50 53 55 46 53.5L38 51.5C36 46 34.5 43 34.5 38Z" fill="url(#film)"/>
+  <circle cx="45.5" cy="38" r="11" fill="url(#hot)"/>
+</svg>
