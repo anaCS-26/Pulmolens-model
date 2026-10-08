@@ -4,7 +4,20 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f2efe8" />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      // Apply the saved or OS theme before first paint (see src/theme.ts).
+      (function () {
+        try {
+          var t = localStorage.getItem("pulmolens.theme");
+          var dark = t ? t === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (dark) {
+            document.documentElement.classList.add("dark");
+            document.querySelector('meta[name="theme-color"]').setAttribute("content", "#161513");
+          }
+        } catch (e) {}
+      })();
+    </script>
     <meta name="description" content="Upload a de-identified chest X-ray to see 14-finding model output, an attention overlay, and a guideline-cited summary. Research prototype, not for clinical use." />
     <title>PulmoLens | AI-Assisted Radiographic Guidance</title>
     <link rel="icon" type="image/png" href="/favicon.png" />

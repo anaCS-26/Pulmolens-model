@@ -57,7 +57,7 @@ function AnimatedChars({ text, start, bold, tailStart }: { text: string; start: 
             {settled}
             {Array.from(tail).map((ch, k) => (
                 <span key={start + splitAt + k} className="char-fade-up">
-                    {ch === ' ' ? ' ' : ch}
+                    {ch}
                 </span>
             ))}
         </Wrap>

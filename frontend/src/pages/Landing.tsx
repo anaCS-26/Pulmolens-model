@@ -51,7 +51,7 @@ export function Landing({ onStart, onLearnMore }: LandingProps) {
                 <div className="md:col-span-7 md:pr-6">
                     <div className="label">Chest radiograph · decision-support prototype</div>
                     <h1 className="mt-6 font-serif text-[52px] font-normal leading-[0.98] tracking-[-0.025em] sm:text-[68px] lg:text-[84px]">
-                        Chest X-ray findings, with the working shown.
+                        Chest <span className="whitespace-nowrap">X-ray</span> findings, with the working shown.
                     </h1>
                     <p className="mt-8 max-w-[34em] text-[17px] leading-[1.6] text-ink-soft">
                         Upload a de-identified chest radiograph. PulmoLens scores fourteen thoracic findings, marks where the

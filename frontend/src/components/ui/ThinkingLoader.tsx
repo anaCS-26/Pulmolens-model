@@ -71,11 +71,11 @@ export const ThinkingLoader: React.FC = () => {
           d={EKG_PATH}
           pathLength={100}
           fill="none"
-          stroke="#c2401c"
+          stroke="currentColor"
           strokeWidth="1.6"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="ekg-sweep"
+          className="ekg-sweep text-marker"
         />
       </svg>
 

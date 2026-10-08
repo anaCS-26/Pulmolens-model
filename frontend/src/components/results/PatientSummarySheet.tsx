@@ -23,7 +23,7 @@ export function PatientSummarySheet({ findings, onClose, onPrint }: PatientSumma
 
     return createPortal(
         <div className="fixed inset-0 z-[60] print:hidden" role="dialog" aria-modal="true" aria-label="Patient-friendly summary">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-ink/40" onClick={onClose} />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/45 dark:bg-black/60" onClick={onClose} />
             <motion.aside
                 initial={{ x: "100%" }}
                 animate={{ x: 0 }}

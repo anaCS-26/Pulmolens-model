@@ -14,7 +14,7 @@ interface FilmPanelProps {
 export function FilmPanel({ children, tl, tr, bl, br, className }: FilmPanelProps) {
     const corner = "pointer-events-none absolute z-10 film-text whitespace-pre-line";
     return (
-        <div className={cn("relative overflow-hidden bg-film", className)}>
+        <div className={cn("relative overflow-hidden bg-film dark:ring-1 dark:ring-rule", className)}>
             {children}
             {tl && <div className={cn(corner, "left-3 top-2.5")}>{tl}</div>}
             {tr && <div className={cn(corner, "right-3 top-2.5 text-right")}>{tr}</div>}
