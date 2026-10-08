@@ -1,6 +1,6 @@
 import React from "react";
 
-/** Wordmark with the app mark: two lung fields on a film plate, with an amber attention hotspot. */
+/** Wordmark with the app mark: lungs and trachea on a film plate, with an amber attention hotspot. */
 export function Logo({ onClick }: { onClick?: () => void }) {
     return (
         <button onClick={onClick} className="flex items-center gap-2.5" aria-label="PulmoLens home">
